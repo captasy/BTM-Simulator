@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<!-- saved from url=(0118)file:///C:/Users/aruny/Your%20team%20Dropbox/arun%20yagnick/PC/Desktop/BTM%20SIM/BTM_Simulator/6.%20BTM_3D_Visual.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTM Simulator — 3D Visual Bridge View</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Share Tech Mono',monospace;}
+
+/* LAYOUT */
+#wrap{display:grid;grid-template-rows:32px 1fr 80px;height:100vh;}
+
+/* TOP HUD */
+#topHUD{background:rgba(4,10,20,0.92);border-bottom:1px solid #0d2a45;display:flex;align-items:center;padding:0 12px;gap:10px;z-index:100;}
+.hud-logo{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#00d4ff;letter-spacing:3px;}
+.hud-logo span{color:#00ff9d;}
+.hud-title{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;letter-spacing:2px;color:#3a7a9a;text-transform:uppercase;}
+.hud-val{font-family:'Share Tech Mono';font-size:12px;color:#00ff9d;margin-right:8px;}
+.hud-lbl{font-size:9px;color:#1a4a6a;margin-right:2px;}
+.hud-sep{color:#0d2a45;margin:0 4px;}
+#hudClock{font-family:'Share Tech Mono';font-size:12px;color:#00d4ff;margin-left:auto;}
+
+/* CANVAS AREA */
+#canvasWrap{position:relative;overflow:hidden;background:#0a1628;}
+#threeCanvas{display:block;width:100%;height:100%;}
+
+/* OVERLAYS */
+#compassHUD{position:absolute;top:10px;right:10px;width:90px;height:90px;z-index:50;}
+#binoOverlay{position:absolute;inset:0;display:none;pointer-events:none;z-index:60;}
+/* Black mask with two circular cutouts = binocular lenses */
+#binoOverlay::before {
+  content:'';
+  position:absolute;inset:0;
+  background: black;
+  /* Reveal two oval "lenses" side by side */
+  -webkit-mask: radial-gradient(ellipse 36% 72% at 34% 50%, black 98%, transparent 100%),
+                radial-gradient(ellipse 36% 72% at 66% 50%, black 98%, transparent 100%);
+  -webkit-mask-composite: source-over;
+  mask: radial-gradient(ellipse 36% 72% at 34% 50%, transparent 98%, black 100%),
+        radial-gradient(ellipse 36% 72% at 66% 50%, transparent 98%, black 100%);
+  mask-composite: add;
+  /* Fallback: simple dark surround */
+}
+#binoCircleL{display:none;}
+#binoCircleR{display:none;}
+/* Draw actual black surround with two holes using clip-path trick via SVG filter */
+#binoMask{position:absolute;inset:0;pointer-events:none;}
+#binoCenter{position:absolute;top:10%;left:21%;right:21%;bottom:10%;border:1.5px solid rgba(0,212,255,0.25);border-radius:50%;pointer-events:none;}
+#binoHairs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.bino-h{position:absolute;background:rgba(0,212,255,0.5);}
+.bino-hh{width:36%;height:1px;left:32%;}
+.bino-hv{height:36%;width:1px;top:32%;}
+#binoData{position:absolute;bottom:10%;left:0;right:0;text-align:center;font-family:'Share Tech Mono';font-size:12px;color:#00d4ff;letter-spacing:1px;}
+
+/* DATA HUD overlay on scene */
+#sceneHUD{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;pointer-events:none;z-index:50;padding:8px 12px;}
+.sh-block{background:rgba(4,10,20,0.75);border:1px solid rgba(13,42,69,0.8);border-radius:2px;padding:4px 8px;min-width:80px;}
+.sh-lbl{font-size:8px;color:#1a4a6a;letter-spacing:1px;text-transform:uppercase;}
+.sh-val{font-family:'Share Tech Mono';font-size:13px;color:#00ff9d;}
+.sh-val.warn{color:#ffaa00;}
+.sh-val.danger{color:#ff2244;animation:blk .8s infinite;}
+@keyframes blk{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ALARM BANNER */
+#almBanner{position:absolute;top:32px;left:0;right:0;background:rgba(255,34,68,0.2);border-bottom:1px solid #ff2244;text-align:center;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:#ff4466;padding:3px;display:none;z-index:80;}
+
+/* TARGET LABELS in scene */
+#targetLabels{position:absolute;inset:0;pointer-events:none;z-index:40;}
+
+/* BOTTOM CONTROLS */
+#bottomControls{background:rgba(4,10,20,0.95);border-top:1px solid #0d2a45;display:grid;grid-template-columns:repeat(8,1fr) 1fr;gap:4px;padding:6px 10px;align-items:center;}
+.ctrl-group{display:flex;flex-direction:column;gap:3px;}
+.ctrl-lbl{font-size:8px;color:#1a4a6a;letter-spacing:1px;text-transform:uppercase;margin-bottom:1px;}
+.btn{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 6px;border-radius:2px;border:1px solid #0d2a45;background:#07111e;color:#3a7a9a;cursor:pointer;transition:all .12s;text-align:center;white-space:nowrap;}
+.btn:hover{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,0.08);}
+.btn.on{background:rgba(0,212,255,0.15);border-color:#00d4ff;color:#00d4ff;}
+.btn.grn{border-color:#006633;color:#00ff88;}
+.btn.grn.on{background:rgba(0,255,136,0.12);border-color:#00ff88;}
+.btn.amb{border-color:#664400;color:#ffaa00;}
+.btn.amb.on{background:rgba(255,170,0,0.12);border-color:#ffaa00;}
+.btn.red{border-color:#661122;color:#ff4466;}
+.btn-row{display:flex;gap:3px;}
+
+input[type=range]{width:100%;accent-color:#00d4ff;height:3px;cursor:pointer;}
+.slider-row{display:flex;align-items:center;gap:4px;}
+.slider-val{font-size:9px;color:#00ff9d;min-width:28px;text-align:right;}
+
+/* BRANDING */
+#branding{position:fixed;bottom:8px;left:12px;z-index:9999;pointer-events:none;}
+#branding span{font-family:Georgia,serif;font-size:15px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.6);}
+
+/* LEGEND */
+#legend{position:absolute;bottom:8px;right:8px;background:rgba(4,10,20,0.85);border:1px solid #0d2a45;padding:5px 8px;font-size:9px;z-index:50;pointer-events:none;}
+.leg-row{display:flex;align-items:center;gap:5px;margin-bottom:2px;color:#3a7a9a;}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- TOP HUD -->
+<div id="topHUD">
+  <div class="hud-logo">BTM<span>SIM</span></div>
+  <div class="hud-title">3D Visual Bridge View</div>
+  <span class="hud-sep">|</span>
+  <span class="hud-lbl">HDG</span><span class="hud-val" id="h-hdg">11.0°</span>
+  <span class="hud-lbl">SOG</span><span class="hud-val" id="h-sog">0.0 kts</span>
+  <span class="hud-lbl">WIND</span><span class="hud-val" id="h-wind">225° 18kts</span>
+  <span class="hud-lbl">VIS</span><span class="hud-val" id="h-vis">10+ NM</span>
+  <span class="hud-lbl">DEPTH</span><span class="hud-val" id="h-dep">26.8m</span>
+  <span class="hud-sep">|</span>
+  <span class="hud-lbl">VIEW</span><span class="hud-val" id="h-view">BOW</span>
+  <span class="hud-lbl">MODE</span><span class="hud-val" id="h-mode">DAY</span>
+  <div id="hudClock">12:15:55 UTC</div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvasWrap">
+  <canvas id="threeCanvas" width="1920" height="658" style="width: 1280px; height: 439px;"></canvas>
+
+  <!-- Scene HUD -->
+  <div id="sceneHUD">
+    <div class="sh-block">
+      <div class="sh-lbl">Heading</div>
+      <div class="sh-val" id="sh-hdg">11.0°</div>
+    </div>
+    <div class="sh-block">
+      <div class="sh-lbl">Speed</div>
+      <div class="sh-val" id="sh-sog">0.0 kts</div>
+    </div>
+    <div class="sh-block">
+      <div class="sh-lbl">Depth / UKC</div>
+      <div class="sh-val" id="sh-dep">26.8 / 12.0m</div>
+    </div>
+    <div class="sh-block">
+      <div class="sh-lbl">Wind</div>
+      <div class="sh-val" id="sh-wind">225° 18kts</div>
+    </div>
+    <div class="sh-block">
+      <div class="sh-lbl">Visibility</div>
+      <div class="sh-val" id="sh-vis">10.0 NM</div>
+    </div>
+  </div>
+
+  <!-- Alarm banner -->
+  <div id="almBanner">⚠ NAVIGATION ALARM</div>
+
+  <!-- Compass HUD canvas -->
+  <canvas id="compassHUD" width="90" height="90"></canvas>
+
+  <!-- Binoculars overlay -->
+  <!-- BINOCULARS OVERLAY -->
+  <div id="binoOverlay">
+    <div id="binoCircleL"></div>
+    <div id="binoCircleR"></div>
+    <div id="binoCenter"></div>
+    <div id="binoHairs">
+      <div class="bino-h bino-hh"></div>
+      <div class="bino-h bino-hv"></div>
+    </div>
+    <!-- Degree scale at top of bino view -->
+    <canvas id="binoScale" style="position:absolute;top:8%;left:15%;width:70%;height:30px;pointer-events:none;"></canvas>
+    <div id="binoData">BRG ---° | RNG --- NM | MAGNIFICATION ×7</div>
+    <!-- Bino bearing readout -->
+    <div id="binoBrg" style="position:absolute;top:6%;left:0;right:0;text-align:center;font-family:'Share Tech Mono';font-size:14px;color:#00ff9d;letter-spacing:2px;pointer-events:none;"></div>
+  </div>
+
+  <!-- CROSS BEARING LINE OVERLAY (SVG on top of scene) -->
+  <svg id="crossBearingOverlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none;z-index:55;">
+    <!-- Horizontal line (range ring reference) -->
+    <line id="cbHoriz" x1="0" y1="50%" x2="100%" y2="50%" stroke="rgba(255,200,0,0.55)" stroke-width="1" stroke-dasharray="6,4"/>
+    <!-- Vertical line (centre bearing line) -->
+    <line id="cbVert" x1="50%" y1="0" x2="50%" y2="100%" stroke="rgba(255,200,0,0.55)" stroke-width="1" stroke-dasharray="6,4"/>
+    <!-- Rotatable bearing line (pivots at centre) -->
+    <line id="cbBearing" x1="50%" y1="50%" x2="50%" y2="0" stroke="#ffdd00" stroke-width="2"/>
+    <!-- Bearing label -->
+    <text id="cbLabel" x="52%" y="12%" fill="#ffdd00" font-family="Share Tech Mono" font-size="13" letter-spacing="1">BRG 000°</text>
+    <!-- Centre crosshair dot -->
+    <circle cx="50%" cy="50%" r="4" fill="none" stroke="#ffdd00" stroke-width="1.5"/>
+  </svg>
+
+  <!-- Target labels -->
+  <div id="targetLabels"><div style="position: absolute; left: 564.482px; top: 217.568px; background: rgba(0, 20, 40, 0.8); border: 1px solid rgb(0, 204, 255); padding: 2px 5px; font-size: 9px; color: rgb(0, 204, 255); border-radius: 2px; white-space: nowrap; pointer-events: none;">TGT 01 0.2NM</div><div style="position: absolute; left: 507.261px; top: 219.626px; background: rgba(0, 20, 40, 0.8); border: 1px solid rgb(0, 204, 255); padding: 2px 5px; font-size: 9px; color: rgb(0, 204, 255); border-radius: 2px; white-space: nowrap; pointer-events: none;">TGT 02 0.1NM</div><div style="position: absolute; left: 524.226px; top: 221.291px; background: rgba(0, 20, 40, 0.8); border: 1px solid rgb(0, 204, 255); padding: 2px 5px; font-size: 9px; color: rgb(0, 204, 255); border-radius: 2px; white-space: nowrap; pointer-events: none;">TGT 03 0.1NM</div><div style="position: absolute; left: 540.278px; top: 215.538px; background: rgba(0, 20, 40, 0.8); border: 1px solid rgb(0, 204, 255); padding: 2px 5px; font-size: 9px; color: rgb(0, 204, 255); border-radius: 2px; white-space: nowrap; pointer-events: none;">TGT 04 0.3NM</div><div style="position: absolute; left: 519.441px; top: 214.349px; background: rgba(0, 20, 40, 0.8); border: 1px solid rgb(0, 204, 255); padding: 2px 5px; font-size: 9px; color: rgb(0, 204, 255); border-radius: 2px; white-space: nowrap; pointer-events: none;">TGT 05 0.5NM</div><div style="position: absolute; left: 592.027px; top: 214.393px; background: rgba(0, 20, 40, 0.8); border: 1px solid rgb(0, 204, 255); padding: 2px 5px; font-size: 9px; color: rgb(0, 204, 255); border-radius: 2px; white-space: nowrap; pointer-events: none;">TGT 06 0.5NM</div></div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="leg-row"><span class="leg-dot" style="background:#00ff88"></span>Own Ship</div>
+    <div class="leg-row"><span class="leg-dot" style="background:#00ccff"></span>AIS Target</div>
+    <div class="leg-row"><span class="leg-dot" style="background:#ffaa00"></span>Danger / Shoal</div>
+    <div class="leg-row"><span class="leg-dot" style="background:#ff4466"></span>Alarm</div>
+    <div class="leg-row"><span class="leg-dot" style="background:#ffd700"></span>Buoy</div>
+  </div>
+</div>
+
+<!-- BOTTOM CONTROLS -->
+<div id="bottomControls">
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">View Direction</div>
+    <div class="btn-row">
+      <button class="btn on" id="vBow" onclick="setView(&#39;BOW&#39;)">BOW</button>
+      <button class="btn" id="vStern" onclick="setView(&#39;STERN&#39;)">STERN</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="vPort" onclick="setView(&#39;PORT&#39;)">PORT</button>
+      <button class="btn" id="vStbd" onclick="setView(&#39;STBD&#39;)">STBD</button>
+    </div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">View Mode</div>
+    <button class="btn on" id="vBridge" onclick="setViewMode(&#39;BRIDGE&#39;)">BRIDGE</button>
+    <button class="btn" id="vBino" onclick="toggleBinoculars()">BINOCULARS</button>
+    <button class="btn" id="vAllRnd" onclick="setViewMode(&#39;ALLROUND&#39;)">ALL ROUND</button>
+    <button class="btn" id="btnCrossBrg" onclick="toggleCrossBearing()" style="border-color:#886600;color:#ffdd00;">CROSS BRG</button>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">Time / Light</div>
+    <button class="btn on" id="mDay" onclick="setDayNight(&#39;DAY&#39;)">DAY</button>
+    <button class="btn" id="mDusk" onclick="setDayNight(&#39;DUSK&#39;)">DUSK</button>
+    <button class="btn" id="mNight" onclick="setDayNight(&#39;NIGHT&#39;)">NIGHT</button>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">Weather</div>
+    <button class="btn on" id="wCalm" onclick="setWeather(&#39;CALM&#39;)">CALM</button>
+    <button class="btn" id="wMod" onclick="setWeather(&#39;MODERATE&#39;)">MODERATE</button>
+    <button class="btn" id="wHeavy" onclick="setWeather(&#39;HEAVY&#39;)">HEAVY SEA</button>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">Visibility</div>
+    <button class="btn on" id="wGood" onclick="setVisibility(10)">GOOD</button>
+    <button class="btn" id="wMist" onclick="setVisibility(2)">MIST</button>
+    <button class="btn" id="wFog" onclick="setVisibility(0.3)">FOG</button>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">Nav Lights</div>
+    <button class="btn" id="btnLights" onclick="toggleLights()">LIGHTS OFF</button>
+    <button class="btn" id="btnFlares" onclick="toggleFlares()">FLARES</button>
+    <button class="btn amb" id="btnMOB" onclick="showMOBLight()">MOB LIGHT</button>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">Camera</div>
+    <div class="slider-row">
+      <span style="font-size:9px;color:#1a4a6a;">FOV</span>
+      <input type="range" id="fovSlider" min="30" max="120" value="70" oninput="setFOV(this.value)">
+      <span class="slider-val" id="fovVal">70°</span>
+    </div>
+    <div class="slider-row">
+      <span style="font-size:9px;color:#1a4a6a;">HGT</span>
+      <input type="range" id="heightSlider" min="5" max="60" value="35" oninput="setCamHeight(this.value)">
+      <span class="slider-val" id="hgtVal">35m</span>
+    </div>
+  </div>
+
+  <div class="ctrl-group">
+    <div class="ctrl-lbl">Targets / Rain</div>
+    <button class="btn" id="btnRain" onclick="toggleRain()">RAIN OFF</button>
+    <button class="btn" id="btnLgtnng" onclick="toggleLightning()">LIGHTNING</button>
+    <button class="btn" id="btnTgtLbl" onclick="toggleTargetLabels()">TGT LABELS</button>
+  </div>
+
+  <div class="ctrl-group" id="crossBrgCtrl" style="display:none;">
+    <div class="ctrl-lbl">Cross Bearing</div>
+    <div class="slider-row">
+      <span style="font-size:9px;color:#ffdd00;">BRG</span>
+      <input type="range" id="cbSlider" min="0" max="359" value="0" oninput="setCrossBearing(this.value)" style="accent-color:#ffdd00;">
+      <span class="slider-val" id="cbVal" style="color:#ffdd00;">000°</span>
+    </div>
+    <div class="slider-row">
+      <span style="font-size:9px;color:#ffdd00;">BINO BRG</span>
+      <input type="range" id="binoDirSlider" min="0" max="359" value="0" oninput="setBinoDir(this.value)" style="accent-color:#00ff9d;">
+      <span class="slider-val" id="binoDirVal" style="color:#00ff9d;">000°</span>
+    </div>
+  </div>
+
+  <div class="ctrl-group" style="align-items:center;justify-content:center;">
+    <div style="font-family:Georgia,serif;font-size:13px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5);text-align:center;">CASY<br>SIMULATIONS</div>
+  </div>
+
+</div>
+</div>
+
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// =============================================
+// STATE
+// =============================================
+var ownHdg    = 11.0;
+var ownSog    = 0.0;
+var ownDepth  = 26.8;
+var ownUKC    = 12.0;
+var windDir   = 225;
+var windSpd   = 18;
+var visibility= 10;
+var waveHeight= 0.3;
+var timeOfDay = 'DAY';
+var weatherMode='CALM';
+var viewDir   = 'BOW';
+var viewMode  = 'BRIDGE';
+var showLights= false;
+var showRain  = false;
+var showFlares= false;
+var showMOB   = false;
+var showLightning=false;
+var showTgtLabels=true;
+var camHeight = 35;
+var fov       = 70;
+var simSecs   = 0;
+var isPaused  = false;
+var alarms    = [];
+
+// 3D targets
+var targets3D = [];
+var tid3D     = 1;
+
+// =============================================
+// THREE.JS SETUP
+// =============================================
+var canvas3 = document.getElementById('threeCanvas');
+var wrap    = document.getElementById('canvasWrap');
+var W = wrap.clientWidth, H = wrap.clientHeight;
+
+var renderer = new THREE.WebGLRenderer({canvas:canvas3, antialias:true});
+renderer.setSize(W, H);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+var scene  = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(fov, W/H, 0.1, 20000);
+
+// Fog (visibility)
+scene.fog = new THREE.Fog(0x88aacc, 100, visibility * 1852); // NM to metres
+
+// =============================================
+// LIGHTING
+// =============================================
+var ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+
+var sunLight = new THREE.DirectionalLight(0xfff5e0, 1.2);
+sunLight.position.set(500, 800, 300);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width  = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near   = 0.5;
+sunLight.shadow.camera.far    = 5000;
+sunLight.shadow.camera.left   = -500;
+sunLight.shadow.camera.right  =  500;
+sunLight.shadow.camera.top    =  500;
+sunLight.shadow.camera.bottom = -500;
+scene.add(sunLight);
+
+var fillLight = new THREE.HemisphereLight(0x87ceeb, 0x1a3a5c, 0.4);
+scene.add(fillLight);
+
+// =============================================
+// SKY
+// =============================================
+var skyGeo  = new THREE.SphereGeometry(8000, 16, 8);
+var skyMat  = new THREE.MeshBasicMaterial({color:0x87ceeb, side:THREE.BackSide});
+var skyMesh = new THREE.Mesh(skyGeo, skyMat);
+scene.add(skyMesh);
+
+// Clouds
+var cloudGroup = new THREE.Group();
+scene.add(cloudGroup);
+function makeCloud(x,y,z,s) {
+  var g = new THREE.SphereGeometry(s,6,4);
+  var m = new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:0.8});
+  var c = new THREE.Mesh(g,m);
+  c.position.set(x,y,z);
+  c.scale.set(2,0.6,1.2);
+  return c;
+}
+for (var ci=0;ci<12;ci++) {
+  var cx2=(Math.random()-0.5)*4000, cy2=600+Math.random()*400, cz2=(Math.random()-0.5)*4000;
+  var cs=100+Math.random()*150;
+  cloudGroup.add(makeCloud(cx2,cy2,cz2,cs));
+}
+
+// =============================================
+// SEA
+// =============================================
+var seaGeo    = new THREE.PlaneGeometry(20000, 20000, 128, 128);
+var seaMat    = new THREE.MeshPhongMaterial({
+  color:0x006994, specular:0x88ccff, shininess:80,
+  transparent:true, opacity:0.9,
+  side:THREE.DoubleSide
+});
+var seaMesh   = new THREE.Mesh(seaGeo, seaMat);
+seaMesh.rotation.x = -Math.PI/2;
+seaMesh.receiveShadow = true;
+scene.add(seaMesh);
+
+// Store original sea vertices for wave animation
+var seaVerts = seaGeo.attributes.position;
+var origSeaY = [];
+for (var vi=0;vi<seaVerts.count;vi++) {
+  origSeaY.push(seaVerts.getY(vi));
+}
+
+// =============================================
+// OWN SHIP DECK (bow view foreground)
+// =============================================
+var shipGroup = new THREE.Group();
+scene.add(shipGroup);
+
+function buildOwnShip() {
+  // ─────────────────────────────────────────────────────────────
+  // WHAT THE OFFICER OF THE WATCH SEES FROM THE BRIDGE WING:
+  //   • The two hull sides (port & starboard) dropping below
+  //   • A flat main deck stretching forward
+  //   • Raised forecastle at the bow with windlass gear
+  //   • Containers stacked on deck (forward hold area)
+  //   • A forward mast on the forecastle
+  //   • Navigation lights on bow
+  //   • Bulwarks / railings along the sides
+  // NOTHING AFT of the camera position is built — the camera IS
+  // on the bridge, looking forward. Superstructure & funnel are
+  // behind the camera, so we don't render them.
+  // ─────────────────────────────────────────────────────────────
+
+  var hullMat    = new THREE.MeshPhongMaterial({color:0x1c2a1c, specular:0x223322, shininess:40});
+  var deckMat    = new THREE.MeshPhongMaterial({color:0x2e3d2e, specular:0x223322});
+  var steelMat   = new THREE.MeshPhongMaterial({color:0x556677, specular:0x334455, shininess:50});
+  var fcMat      = new THREE.MeshPhongMaterial({color:0x2a3826});
+  var bollardMat = new THREE.MeshPhongMaterial({color:0x334444});
+  var wlMat      = new THREE.MeshPhongMaterial({color:0xccccaa}); // waterline stripe
+
+  // ── SCALE NOTE ──────────────────────────────────────────────
+  // Ship total length ~180m. Camera (bridge) at z=0 (world origin
+  // within shipGroup). Bow is at z = -90 (forward = negative Z).
+  // We only build z = 0 to z = -100 (the forward half visible from bridge).
+
+  // PORT HULL SIDE (visible slab dropping to waterline)
+  var hullPGeo = new THREE.BoxGeometry(3, 14, 110);
+  var hullP    = new THREE.Mesh(hullPGeo, hullMat);
+  hullP.position.set(-24, -6, -45);
+  hullP.castShadow=true;
+  shipGroup.add(hullP);
+
+  // STARBOARD HULL SIDE
+  var hullSGeo = new THREE.BoxGeometry(3, 14, 110);
+  var hullS    = new THREE.Mesh(hullSGeo, hullMat);
+  hullS.position.set(24, -6, -45);
+  hullS.castShadow=true;
+  shipGroup.add(hullS);
+
+  // WATERLINE STRIPE — white boot-topping
+  var wlP = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 110), wlMat);
+  wlP.position.set(-24, 2, -45); shipGroup.add(wlP);
+  var wlS = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 110), wlMat);
+  wlS.position.set(24, 2, -45); shipGroup.add(wlS);
+
+  // MAIN DECK (flat, stretches from bridge forward to forecastle)
+  var deckGeo = new THREE.BoxGeometry(48, 2, 110);
+  var deck    = new THREE.Mesh(deckGeo, deckMat);
+  deck.position.set(0, 3, -45);
+  deck.receiveShadow=true; deck.castShadow=true;
+  shipGroup.add(deck);
+
+  // PORT DECK BULWARK (low railing)
+  var bwkPGeo = new THREE.BoxGeometry(1.2, 3, 65);
+  var bwkP    = new THREE.Mesh(bwkPGeo, steelMat);
+  bwkP.position.set(-24, 5.5, -45);
+  shipGroup.add(bwkP);
+  var bwkS = bwkP.clone(); bwkS.position.set(24, 5.5, -45);
+  shipGroup.add(bwkS);
+
+  // ── CARGO HATCH COAMINGS (2 visible holds) ───────────────────
+  var hatchMat  = new THREE.MeshPhongMaterial({color:0x445544});
+  var coamMat   = new THREE.MeshPhongMaterial({color:0x3a4a3a});
+  [-25, -52].forEach(function(hz) {
+    var coam = new THREE.Mesh(new THREE.BoxGeometry(30, 3.5, 22), coamMat);
+    coam.position.set(0, 4, hz);
+    coam.castShadow=true;
+    shipGroup.add(coam);
+    var hatch = new THREE.Mesh(new THREE.BoxGeometry(28, 0.8, 20), hatchMat);
+    hatch.position.set(0, 5.8, hz);
+    shipGroup.add(hatch);
+  });
+
+  // ── CONTAINERS on deck (2 stacks, 2 rows, clearly visible) ───
+  var contColors = [0x2255aa, 0xaa3322, 0x228833, 0x885522, 0x448899, 0xaa8833];
+  // Stack 1 — centred, 2 high — between the two hatches
+  for (var row=0; row<3; row++) {
+    for (var tier=0; tier<2; tier++) {
+      var cGeo = new THREE.BoxGeometry(10, 5, 12);
+      var cMat = new THREE.MeshPhongMaterial({color: contColors[(row+tier*3)%contColors.length]});
+      var cBox = new THREE.Mesh(cGeo, cMat);
+      cBox.position.set((row-1)*11, 5 + tier*5.2, -25);
+      cBox.castShadow=true;
+      shipGroup.add(cBox);
+    }
+  }
+  // Stack 2 — farther forward, 1 tier only
+  for (var row2=0; row2<3; row2++) {
+    var cGeo2 = new THREE.BoxGeometry(10, 5, 12);
+    var cMat2 = new THREE.MeshPhongMaterial({color: contColors[(row2+2)%contColors.length]});
+    var cBox2 = new THREE.Mesh(cGeo2, cMat2);
+    cBox2.position.set((row2-1)*11, 5, -52);
+    cBox2.castShadow=true;
+    shipGroup.add(cBox2);
+  }
+
+  // ── FORECASTLE (raised bow platform) ─────────────────────────
+  var fcDeckGeo = new THREE.BoxGeometry(44, 3, 40);
+  var fcDeck    = new THREE.Mesh(fcDeckGeo, fcMat);
+  fcDeck.position.set(0, 7, -80);
+  fcDeck.castShadow=true;
+  shipGroup.add(fcDeck);
+
+  // Forecastle bulwarks
+  var fcBwkF = new THREE.Mesh(new THREE.BoxGeometry(44, 3, 1.2), steelMat);
+  fcBwkF.position.set(0, 9.5, -99); shipGroup.add(fcBwkF);
+  var fcBwkP = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3, 40), steelMat);
+  fcBwkP.position.set(-22, 9.5, -80); shipGroup.add(fcBwkP);
+  var fcBwkS = fcBwkP.clone(); fcBwkS.position.set(22, 9.5, -80);
+  shipGroup.add(fcBwkS);
+
+  // Windlass (bow mooring gear)
+  var wlGeo = new THREE.CylinderGeometry(2.5, 2.5, 5, 10);
+  var wl1   = new THREE.Mesh(wlGeo, steelMat);
+  wl1.rotation.z = Math.PI/2; wl1.position.set(-8, 9.5, -88);
+  wl1.castShadow=true; shipGroup.add(wl1);
+  var wl2 = wl1.clone(); wl2.position.set(8, 9.5, -88);
+  shipGroup.add(wl2);
+
+  // Bollards on forecastle
+  function makeBollard(x, z, baseY) {
+    var bg = new THREE.CylinderGeometry(0.8, 0.8, 4, 6);
+    var bm = new THREE.Mesh(bg, bollardMat);
+    bm.position.set(x, baseY+2, z); shipGroup.add(bm);
+    var cap = new THREE.Mesh(new THREE.SphereGeometry(1.1, 6, 4), bollardMat);
+    cap.position.set(x, baseY+4.5, z); shipGroup.add(cap);
+  }
+  makeBollard(-14, -92, 8); makeBollard(14, -92, 8);
+  makeBollard(-14, -77, 8); makeBollard(14, -77, 8);
+  makeBollard(-20, -30, 4); makeBollard(20, -30, 4);
+  makeBollard(-20, -10, 4); makeBollard(20, -10, 4);
+
+  // Hawse pipes
+  var hwGeo = new THREE.CylinderGeometry(1.2, 1.2, 5, 8);
+  var hw1   = new THREE.Mesh(hwGeo, bollardMat);
+  hw1.rotation.x = Math.PI/3; hw1.position.set(-12, 5, -98); shipGroup.add(hw1);
+  var hw2 = hw1.clone(); hw2.position.set(12, 5, -98); shipGroup.add(hw2);
+
+  // Bow — tapered wedge (pyramid approximation)
+  var bowGeo  = new THREE.CylinderGeometry(0, 22, 18, 4, 1);
+  var bowMesh = new THREE.Mesh(bowGeo, hullMat);
+  bowMesh.position.set(0, -3, -100);
+  bowMesh.rotation.y = Math.PI/4;
+  bowMesh.scale.set(1, 0.7, 0.55);
+  bowMesh.castShadow=true;
+  shipGroup.add(bowMesh);
+
+  // BOW STEM visible tip
+  var stemGeo  = new THREE.ConeGeometry(2, 8, 6);
+  var stemMesh = new THREE.Mesh(stemGeo, hullMat);
+  stemMesh.position.set(0, 0, -104);
+  stemMesh.rotation.x = -Math.PI/2;
+  shipGroup.add(stemMesh);
+
+  // Bulbous bow just below waterline
+  var bulbGeo  = new THREE.SphereGeometry(5, 10, 8);
+  var bulbMesh = new THREE.Mesh(bulbGeo, hullMat);
+  bulbMesh.position.set(0, -8, -100);
+  bulbMesh.scale.set(1, 0.7, 1.3);
+  shipGroup.add(bulbMesh);
+
+  // ── FORWARD MAST (on forecastle, clearly visible from bridge) ─
+  var fMastGeo = new THREE.CylinderGeometry(0.5, 0.8, 28, 8);
+  var fMast    = new THREE.Mesh(fMastGeo, steelMat);
+  fMast.position.set(0, 24, -82);
+  fMast.castShadow=true;
+  shipGroup.add(fMast);
+  // Cross-tree
+  var xtGeo = new THREE.BoxGeometry(16, 0.8, 1.5);
+  var xtM   = new THREE.Mesh(xtGeo, steelMat);
+  xtM.position.set(0, 35, -82); shipGroup.add(xtM);
+  // Derrick booms
+  var boomGeoF = new THREE.CylinderGeometry(0.35, 0.55, 22, 6);
+  var boomPF   = new THREE.Mesh(boomGeoF, steelMat);
+  boomPF.position.set(-7, 22, -78); boomPF.rotation.z=-0.4; boomPF.castShadow=true;
+  shipGroup.add(boomPF);
+  var boomSF = boomPF.clone(); boomSF.position.set(7,22,-78); boomSF.rotation.z=0.4;
+  shipGroup.add(boomSF);
+
+  // ── NAVIGATION LIGHTS ─────────────────────────────────────────
+  buildNavLights();
+}
+
+// Nav lights
+var navLightMeshes = {};
+function buildNavLights() {
+  function makeLight(col,x,y,z,name) {
+    var g=new THREE.SphereGeometry(0.8,8,8);
+    var m=new THREE.MeshBasicMaterial({color:col,visible:false});
+    var mesh=new THREE.Mesh(g,m);
+    mesh.position.set(x,y,z);
+    mesh.name='navlight_'+name;
+    shipGroup.add(mesh);
+    navLightMeshes[name]=mesh;
+    // Point light for glow
+    var pl=new THREE.PointLight(col,0,30);
+    pl.position.set(x,y,z);
+    pl.name='navlight_pt_'+name;
+    shipGroup.add(pl);
+    navLightMeshes['pt_'+name]=pl;
+  }
+  makeLight(0xffffff,0,38,-82,'masthead');  // white masthead on forward mast
+  makeLight(0x00ff00,22,6,-98,'stbd');     // green starboard bow
+  makeLight(0xff0000,-22,6,-98,'port');    // red port bow
+  makeLight(0xffffff,0,8,10,'stern');      // white stern (aft, behind camera)
+  makeLight(0xffd700,0,40,-82,'flare');     // amber flare on mast
+  makeLight(0xff6600,0,5,-30,'mob');          // orange MOB amidships
+}
+
+buildOwnShip();
+// Position camera at bridge height, looking forward
+camera.position.set(0, camHeight, 8);
+camera.lookAt(0, camHeight-5, -2000);
+
+// =============================================
+// COASTLINE (Bosphorus silhouette)
+// =============================================
+function buildCoastline() {
+  var euroPoints = [
+    new THREE.Vector3(-500,0,-800),new THREE.Vector3(-520,0,-600),
+    new THREE.Vector3(-540,0,-400),new THREE.Vector3(-560,0,-200),
+    new THREE.Vector3(-580,0,0),   new THREE.Vector3(-560,0,200),
+    new THREE.Vector3(-540,0,400), new THREE.Vector3(-520,0,600),
+    new THREE.Vector3(-500,0,800),
+  ];
+  var asiaPoints = [
+    new THREE.Vector3(500,0,-800), new THREE.Vector3(520,0,-600),
+    new THREE.Vector3(540,0,-400), new THREE.Vector3(560,0,-200),
+    new THREE.Vector3(580,0,0),    new THREE.Vector3(560,0,200),
+    new THREE.Vector3(540,0,400),  new THREE.Vector3(520,0,600),
+    new THREE.Vector3(500,0,800),
+  ];
+
+  function makeShore(pts, side) {
+    var shape = new THREE.Shape();
+    shape.moveTo(pts[0].x, pts[0].z);
+    for (var si=1;si<pts.length;si++) shape.lineTo(pts[si].x, pts[si].z);
+    shape.lineTo(side*3000, pts[pts.length-1].z);
+    shape.lineTo(side*3000, pts[0].z);
+    shape.closePath();
+    var extSettings={depth:8, bevelEnabled:false};
+    var geo=new THREE.ExtrudeGeometry(shape, extSettings);
+    // Realistic ground - mix of dirt/grass colour
+    var mat=new THREE.MeshLambertMaterial({color:0x5a7a3a});
+    var mesh=new THREE.Mesh(geo,mat);
+    mesh.rotation.x=-Math.PI/2;
+    mesh.position.y=0;
+    mesh.receiveShadow=true;
+    scene.add(mesh);
+
+    // Undulating terrain on top - green rolling hills
+    var terrainGeo = new THREE.PlaneGeometry(1200, 1600, 30, 30);
+    var tverts = terrainGeo.attributes.position;
+    for (var tv=0;tv<tverts.count;tv++) {
+      var tx2=tverts.getX(tv), tz2=tverts.getZ(tv);
+      var height = Math.sin(tx2*0.008)*12 + Math.cos(tz2*0.006)*8
+                 + Math.sin(tx2*0.02+tz2*0.015)*5 + Math.random()*4;
+      tverts.setY(tv, Math.max(0, height));
+    }
+    tverts.needsUpdate=true;
+    terrainGeo.computeVertexNormals();
+    var terrainMat = new THREE.MeshLambertMaterial({
+      color: 0x4a7a2a,
+      vertexColors: false
+    });
+    var terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+    terrainMesh.rotation.x = -Math.PI/2;
+    terrainMesh.position.set(side*780, 1, 0);
+    terrainMesh.receiveShadow=true;
+    scene.add(terrainMesh);
+  }
+
+  makeShore(euroPoints, -1);
+  makeShore(asiaPoints,  1);
+
+  // EUROPEAN SHORE — dense Istanbul cityscape
+  buildRealisticSkyline(-620, -250, 'europe');
+  // ASIAN SHORE — Uskudar/Kadikoy district
+  buildRealisticSkyline(640, 150, 'asia');
+}
+
+// ── TREE helper ──────────────────────────────────────────
+function makeTree(x, y, z, h, variety) {
+  var group = new THREE.Group();
+  // Trunk
+  var trunkH = h * 0.35;
+  var trunkGeo = new THREE.CylinderGeometry(0.5, 0.8, trunkH, 6);
+  var trunkMat = new THREE.MeshLambertMaterial({color: 0x5c3a1e});
+  var trunk = new THREE.Mesh(trunkGeo, trunkMat);
+  trunk.position.y = trunkH/2;
+  trunk.castShadow=true;
+  group.add(trunk);
+
+  if (variety === 'pine') {
+    // Pine — stacked cones
+    var coneColors=[0x1a5c1a,0x1e6b1e,0x166616];
+    for (var ci2=0;ci2<3;ci2++) {
+      var cg=new THREE.ConeGeometry(h*0.28-ci2*1.5, h*0.35, 7);
+      var cm2=new THREE.MeshLambertMaterial({color:coneColors[ci2%3]});
+      var cone=new THREE.Mesh(cg,cm2);
+      cone.position.y = trunkH + ci2*(h*0.2);
+      cone.castShadow=true;
+      group.add(cone);
+    }
+  } else if (variety === 'round') {
+    // Round deciduous tree
+    var leafColors=[0x2d7a2d,0x338833,0x3a9a3a,0x226622];
+    var lg=new THREE.SphereGeometry(h*0.38, 7, 5);
+    var lm=new THREE.MeshLambertMaterial({color:leafColors[Math.floor(Math.random()*4)]});
+    var leaves=new THREE.Mesh(lg,lm);
+    leaves.position.y=trunkH+h*0.3;
+    leaves.scale.set(1, 0.85, 1);
+    leaves.castShadow=true;
+    group.add(leaves);
+  } else {
+    // Cypress/tall tree
+    var cyGeo=new THREE.ConeGeometry(h*0.14, h*0.8, 6);
+    var cyMat=new THREE.MeshLambertMaterial({color:0x1a5a2a});
+    var cy=new THREE.Mesh(cyGeo,cyMat);
+    cy.position.y=trunkH+h*0.35;
+    cy.castShadow=true;
+    group.add(cy);
+  }
+
+  group.position.set(x, y, z);
+  group.rotation.y = Math.random()*Math.PI*2;
+  scene.add(group);
+}
+
+// ── BUILDING helper ──────────────────────────────────────
+function makeBuilding(x, z, w, d, h, floors, style) {
+  var group = new THREE.Group();
+
+  // Main body
+  var wallColors = {
+    apartment:  [0x9a8a7a, 0x8a7a6a, 0x7a8a9a, 0x9a9a8a],
+    modern:     [0x6a8aaa, 0x7a9abb, 0x88aacc, 0x5a7a9a],
+    old:        [0xc8a870, 0xb89860, 0xd4b880, 0xaa8850],
+    industrial: [0x7a7a7a, 0x6a6a6a, 0x888888, 0x555555],
+  };
+  var cols = wallColors[style] || wallColors.apartment;
+  var wallCol = cols[Math.floor(Math.random()*cols.length)];
+
+  var bodyGeo = new THREE.BoxGeometry(w, h, d);
+  var bodyMat = new THREE.MeshLambertMaterial({color:wallCol});
+  var body    = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = h/2;
+  body.castShadow=true; body.receiveShadow=true;
+  group.add(body);
+
+  // Windows — only if building is visible size
+  if (h > 15 && floors > 3) {
+    var winGeo = new THREE.PlaneGeometry(w*0.6, h*0.7);
+    var winMat = new THREE.MeshLambertMaterial({color:0xaaccee, transparent:true, opacity:0.7});
+    // Front face windows
+    var winMesh = new THREE.Mesh(winGeo, winMat);
+    winMesh.position.set(0, h/2, d/2+0.1);
+    group.add(winMesh);
+  }
+
+  // Flat roof / pitched roof
+  if (style === 'old' || Math.random() > 0.6) {
+    var roofGeo = new THREE.ConeGeometry(Math.max(w,d)*0.65, h*0.25, 4);
+    var roofMat = new THREE.MeshLambertMaterial({color:0x883322});
+    var roof    = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.y = h + h*0.12;
+    roof.rotation.y = Math.PI/4;
+    roof.castShadow=true;
+    group.add(roof);
+  } else {
+    // Flat roof with parapet and rooftop structures
+    var parapetGeo = new THREE.BoxGeometry(w+1, 1.5, d+1);
+    var parapetMat = new THREE.MeshLambertMaterial({color:0x888888});
+    var parapet    = new THREE.Mesh(parapetGeo, parapetMat);
+    parapet.position.y = h + 0.75;
+    group.add(parapet);
+    // Water tank on roof
+    if (Math.random() > 0.5) {
+      var tankGeo = new THREE.CylinderGeometry(1.5,1.5,3,8);
+      var tankMat = new THREE.MeshLambertMaterial({color:0x555555});
+      var tank    = new THREE.Mesh(tankGeo, tankMat);
+      tank.position.set((Math.random()-0.5)*w*0.4, h+2, (Math.random()-0.5)*d*0.4);
+      group.add(tank);
+    }
+    // AC units
+    for (var ac=0;ac<Math.floor(Math.random()*4);ac++) {
+      var acGeo=new THREE.BoxGeometry(2,1,1.5);
+      var acMat=new THREE.MeshLambertMaterial({color:0xbbbbbb});
+      var acM  =new THREE.Mesh(acGeo,acMat);
+      acM.position.set((Math.random()-0.5)*w*0.6, h+0.5, (Math.random()-0.5)*d*0.6);
+      group.add(acM);
+    }
+  }
+
+  group.position.set(x, 0, z);
+  group.rotation.y = (Math.round(Math.random()*3))*Math.PI/2;
+  scene.add(group);
+}
+
+// ── MOSQUE helper ────────────────────────────────────────
+function makeMosque(x, z, scale) {
+  var s = scale || 1;
+  var group = new THREE.Group();
+  // Main body
+  var bodyGeo=new THREE.BoxGeometry(50*s,30*s,50*s);
+  var bodyMat=new THREE.MeshLambertMaterial({color:0xd4c090});
+  var body=new THREE.Mesh(bodyGeo,bodyMat);
+  body.position.y=15*s; body.castShadow=true; group.add(body);
+  // Main dome
+  var domeGeo=new THREE.SphereGeometry(22*s,12,8,0,Math.PI*2,0,Math.PI/2);
+  var domeMat=new THREE.MeshLambertMaterial({color:0xb0a070});
+  var dome=new THREE.Mesh(domeGeo,domeMat);
+  dome.position.y=30*s; dome.castShadow=true; group.add(dome);
+  // 4 small domes at corners
+  for (var cd=0;cd<4;cd++) {
+    var sdg=new THREE.SphereGeometry(8*s,8,6,0,Math.PI*2,0,Math.PI/2);
+    var sdm=new THREE.MeshLambertMaterial({color:0xb0a070});
+    var sd=new THREE.Mesh(sdg,sdm);
+    var ang=cd*Math.PI/2+Math.PI/4;
+    sd.position.set(Math.cos(ang)*28*s,28*s,Math.sin(ang)*28*s);
+    group.add(sd);
+  }
+  // 2 minarets
+  for (var mi=0;mi<2;mi++) {
+    var minGeo=new THREE.CylinderGeometry(3*s,4*s,80*s,8);
+    var minMat=new THREE.MeshLambertMaterial({color:0xd4c090});
+    var minM=new THREE.Mesh(minGeo,minMat);
+    minM.position.set((mi===0?-28:28)*s,40*s,0);
+    minM.castShadow=true; group.add(minM);
+    // Minaret tip
+    var tipGeo=new THREE.ConeGeometry(4*s,14*s,8);
+    var tipM=new THREE.Mesh(tipGeo,new THREE.MeshLambertMaterial({color:0x888870}));
+    tipM.position.set((mi===0?-28:28)*s,83*s,0);
+    group.add(tipM);
+  }
+  group.position.set(x, 0, z);
+  scene.add(group);
+}
+
+// ── BOSPHORUS BRIDGE (realistic) ─────────────────────────
+function makeBosphorusBridge() {
+  var bz = -1200; // position along strait
+  // Road deck
+  var deckGeo=new THREE.BoxGeometry(1200,4,18);
+  var deckMat=new THREE.MeshLambertMaterial({color:0x778899});
+  var deck=new THREE.Mesh(deckGeo,deckMat);
+  deck.position.set(0,80,bz); deck.castShadow=true; scene.add(deck);
+  // Barrier rails
+  for (var r=0;r<2;r++) {
+    var rgeo=new THREE.BoxGeometry(1200,2,0.5);
+    var rmesh=new THREE.Mesh(rgeo,new THREE.MeshLambertMaterial({color:0x889aaa}));
+    rmesh.position.set(0,82,bz+(r===0?8:-8)); scene.add(rmesh);
+  }
+  // Two main towers
+  for (var bt=0;bt<2;bt++) {
+    var txp=(bt===0?-540:540);
+    // Tower shaft
+    var tgeo=new THREE.BoxGeometry(12,200,12);
+    var tmesh=new THREE.Mesh(tgeo,new THREE.MeshLambertMaterial({color:0x667788}));
+    tmesh.position.set(txp,100,bz); tmesh.castShadow=true; scene.add(tmesh);
+    // Cross beam
+    var cbgeo=new THREE.BoxGeometry(12,8,40);
+    var cbm=new THREE.Mesh(cbgeo,new THREE.MeshLambertMaterial({color:0x556677}));
+    cbm.position.set(txp,175,bz); scene.add(cbm);
+    // Tower top
+    var ttgeo=new THREE.BoxGeometry(14,20,14);
+    var ttm=new THREE.Mesh(ttgeo,new THREE.MeshLambertMaterial({color:0x556677}));
+    ttm.position.set(txp,205,bz); scene.add(ttm);
+  }
+  // Suspension cables (many thin boxes)
+  for (var sc2=-520;sc2<=520;sc2+=20) {
+    var cableH = 80 + Math.pow(sc2/540,2)*120;
+    var cabGeo=new THREE.BoxGeometry(1,cableH,1);
+    var cabMat=new THREE.MeshLambertMaterial({color:0x556677});
+    var cabM=new THREE.Mesh(cabGeo,cabMat);
+    cabM.position.set(sc2, 80+cableH/2*0.4, bz);
+    scene.add(cabM);
+  }
+  // Main cables (two thick arcs approximated)
+  for (var mc=0;mc<2;mc++) {
+    var mcz=bz+(mc===0?6:-6);
+    for (var mp=-540;mp<540;mp+=30) {
+      var mch=80+Math.pow(mp/540,2)*130;
+      var mcgeo=new THREE.BoxGeometry(32,3,3);
+      var mcm=new THREE.Mesh(mcgeo,new THREE.MeshLambertMaterial({color:0x445566}));
+      mcm.position.set(mp+15,mch,mcz);
+      var angle2=Math.atan2(Math.pow((mp+30)/540,2)*130-mch+80, 30);
+      mcm.rotation.z=angle2;
+      scene.add(mcm);
+    }
+  }
+}
+
+// ── MAIN SKYLINE BUILDER ─────────────────────────────────
+function buildRealisticSkyline(baseX, baseZ, side) {
+  var sign = (side==='europe') ? -1 : 1;
+
+  // === TERRAIN ZONES ===
+  // Zone 1: Waterfront — dense low buildings, quays, warehouses
+  // Zone 2: Hillside — apartments, trees mixed
+  // Zone 3: Hilltop — bigger buildings, parks, mosques
+
+  var zRange = 800; // spread along strait
+  var xDepth = 400; // depth inland
+
+  // ── WATERFRONT BUILDINGS (closest to water, low-rise) ──
+  for (var i=0;i<25;i++) {
+    var bz2=baseZ+(Math.random()-0.5)*zRange;
+    var bx2=baseX+sign*((Math.random()*80)+20);
+    var bw=20+Math.random()*30;
+    var bd=15+Math.random()*20;
+    var bh=8+Math.random()*18;
+    var style=(Math.random()>0.4)?'old':'industrial';
+    makeBuilding(bx2, bz2, bw, bd, bh, 2, style);
+  }
+
+  // ── MID-LEVEL APARTMENTS (main city fabric) ──
+  for (var j=0;j<40;j++) {
+    var az=baseZ+(Math.random()-0.5)*zRange*1.2;
+    var ax=baseX+sign*(80+Math.random()*200);
+    var aw=15+Math.random()*25;
+    var ad=15+Math.random()*20;
+    var ah=20+Math.random()*50;
+    var afl=Math.round(ah/3.5);
+    makeBuilding(ax, az, aw, ad, ah, afl, 'apartment');
+  }
+
+  // ── TALL MODERN TOWERS ──
+  var numTowers = side==='europe' ? 8 : 5;
+  for (var k=0;k<numTowers;k++) {
+    var tz2=baseZ+(Math.random()-0.5)*zRange*0.8;
+    var tx2=baseX+sign*(150+Math.random()*180);
+    var th=60+Math.random()*120;
+    var tw=14+Math.random()*18;
+    makeBuilding(tx2, tz2, tw, tw, th, Math.round(th/3.5), 'modern');
+  }
+
+  // ── MOSQUES (European side has Suleymaniye, Hagia Sophia area) ──
+  if (side==='europe') {
+    makeMosque(baseX+sign*160, baseZ-100, 0.9);
+    makeMosque(baseX+sign*240, baseZ+200, 0.6);
+    makeMosque(baseX+sign*120, baseZ+400, 0.5);
+  } else {
+    makeMosque(baseX+sign*180, baseZ+80,  0.7);
+    makeMosque(baseX+sign*280, baseZ-200, 0.5);
+  }
+
+  // ── TREES — scattered throughout ──
+  var treeTypes=['pine','round','cypress'];
+  for (var t2=0;t2<80;t2++) {
+    var tz3=baseZ+(Math.random()-0.5)*zRange*1.3;
+    var tx3=baseX+sign*(30+Math.random()*xDepth);
+    var th2=8+Math.random()*16;
+    // More trees on hilltops, fewer near waterfront
+    var distFromShore=Math.abs(tx3-baseX);
+    if (distFromShore < 80 && Math.random()>0.3) continue; // sparse near water
+    var variety=treeTypes[Math.floor(Math.random()*3)];
+    // Elevation based on distance from shore
+    var elev=Math.max(0,(distFromShore-60)*0.08+Math.random()*4);
+    makeTree(tx3, elev, tz3, th2, variety);
+  }
+
+  // ── GREEN PARKS / OPEN SPACES ──
+  for (var p2=0;p2<6;p2++) {
+    var pz=baseZ+(Math.random()-0.5)*zRange;
+    var px=baseX+sign*(100+Math.random()*150);
+    var pGeo=new THREE.PlaneGeometry(40+Math.random()*60, 30+Math.random()*40);
+    var pMat=new THREE.MeshLambertMaterial({color:0x3a8a2a});
+    var pMesh=new THREE.Mesh(pGeo,pMat);
+    pMesh.rotation.x=-Math.PI/2;
+    pMesh.position.set(px, 0.5, pz);
+    scene.add(pMesh);
+    // Trees in park
+    for (var pt=0;pt<6;pt++) {
+      makeTree(px+(Math.random()-0.5)*35, 0.5, pz+(Math.random()-0.5)*25, 8+Math.random()*8, 'round');
+    }
+  }
+
+  // ── ROADS visible from bridge ──
+  for (var r2=0;r2<4;r2++) {
+    var rLen=200+Math.random()*300;
+    var rGeo=new THREE.PlaneGeometry(6, rLen);
+    var rMat=new THREE.MeshLambertMaterial({color:0x444444});
+    var rMesh=new THREE.Mesh(rGeo,rMat);
+    rMesh.rotation.x=-Math.PI/2;
+    var rz=baseZ+(Math.random()-0.5)*zRange;
+    var rx=baseX+sign*(40+Math.random()*120);
+    rMesh.position.set(rx, 0.3, rz);
+    rMesh.rotation.z=Math.random()*0.5-0.25;
+    scene.add(rMesh);
+  }
+
+  // ── HARBOUR / QUAY WALL ──
+  var quayGeo=new THREE.BoxGeometry(12, 4, zRange*0.9);
+  var quayMat=new THREE.MeshLambertMaterial({color:0x888880});
+  var quay=new THREE.Mesh(quayGeo,quayMat);
+  quay.position.set(baseX+sign*6, 0, baseZ);
+  quay.castShadow=true;
+  scene.add(quay);
+
+  // ── CRANES on waterfront ──
+  for (var cr=0;cr<3;cr++) {
+    var crz=baseZ+(cr-1)*200;
+    var crx=baseX+sign*30;
+    // Crane mast
+    var mGeo=new THREE.BoxGeometry(4,80,4);
+    var mMat=new THREE.MeshLambertMaterial({color:0xffcc00});
+    var mM=new THREE.Mesh(mGeo,mMat);
+    mM.position.set(crx,40,crz); scene.add(mM);
+    // Crane arm
+    var aGeo=new THREE.BoxGeometry(80,3,3);
+    var aM=new THREE.Mesh(aGeo,mMat);
+    aM.position.set(crx+sign*20,82,crz); scene.add(aM);
+    // Counter arm
+    var caGeo=new THREE.BoxGeometry(25,3,3);
+    var caM=new THREE.Mesh(caGeo,mMat);
+    caM.position.set(crx-sign*12,82,crz); scene.add(caM);
+    // Cable
+    var ccGeo=new THREE.BoxGeometry(1,30,1);
+    var ccM=new THREE.Mesh(ccGeo,new THREE.MeshLambertMaterial({color:0x888888}));
+    ccM.position.set(crx+sign*40,67,crz); scene.add(ccM);
+  }
+}
+
+buildCoastline();
+makeBosphorusBridge();
+
+// =============================================
+// BUOYS
+// =============================================
+function makeBuoy(x,z,col) {
+  var g1=new THREE.SphereGeometry(3,8,6);
+  var mat=new THREE.MeshPhongMaterial({color:col,specular:0xffffff,shininess:60});
+  var b=new THREE.Mesh(g1,mat);
+  b.position.set(x,2,z);
+  scene.add(b);
+  // Pole
+  var pg=new THREE.CylinderGeometry(0.3,0.3,8,6);
+  var pm=new THREE.Mesh(pg,new THREE.MeshPhongMaterial({color:col}));
+  pm.position.set(x,6,z);
+  scene.add(pm);
+  // Point light for night
+  var pl=new THREE.PointLight(col,0,40);
+  pl.position.set(x,10,z);
+  pl.name='buoy_light';
+  scene.add(pl);
+}
+
+makeBuoy(-120,300,0x00ff00); makeBuoy(120,300,0xff4444);
+makeBuoy(-130,0,0x00ff00);   makeBuoy(130,0,0xff4444);
+makeBuoy(-140,-300,0x00ff00);makeBuoy(140,-300,0xff4444);
+makeBuoy(0,600,0xffaa00);    // special mark
+
+// =============================================
+// AIS TARGETS (3D ships)
+// =============================================
+function makeTargetShip(x,z,hdg,spd,name,col) {
+  var g = new THREE.Group();
+  // Hull
+  var hg=new THREE.BoxGeometry(12,6,80);
+  var hm=new THREE.MeshPhongMaterial({color:col||0x334455,specular:0x223344});
+  var hull=new THREE.Mesh(hg,hm);
+  hull.position.y=2;
+  hull.castShadow=true;
+  g.add(hull);
+  // Superstructure
+  var sg=new THREE.BoxGeometry(10,10,20);
+  var sm=new THREE.MeshPhongMaterial({color:0x445566});
+  var sup=new THREE.Mesh(sg,sm);
+  sup.position.set(0,9,20);
+  sup.castShadow=true;
+  g.add(sup);
+  // Mast
+  var mg=new THREE.CylinderGeometry(0.3,0.4,12,6);
+  var mm=new THREE.Mesh(mg,new THREE.MeshPhongMaterial({color:0x556677}));
+  mm.position.set(0,17,20);
+  g.add(mm);
+  // Nav lights on target
+  var gl2=new THREE.PointLight(0x00ff00,0,20);
+  gl2.position.set(6,6,-40); gl2.name='tgt_stbd'; g.add(gl2);
+  var rl2=new THREE.PointLight(0xff0000,0,20);
+  rl2.position.set(-6,6,-40); rl2.name='tgt_port'; g.add(rl2);
+  var wl2=new THREE.PointLight(0xffffff,0,30);
+  wl2.position.set(0,20,20); wl2.name='tgt_mast'; g.add(wl2);
+
+  g.position.set(x,0,z);
+  g.rotation.y = -hdg*Math.PI/180;
+  g.userData = {name:name,speed:spd,course:hdg,x:x,z:z};
+  scene.add(g);
+  targets3D.push(g);
+  return g;
+}
+
+var tgtColors=[0x334455,0x554433,0x335544,0x443355,0x554455];
+for (var ti=0;ti<6;ti++) {
+  var tx=(Math.random()-0.5)*600, tz=-200-Math.random()*1200;
+  var tcrs=180+Math.random()*60-30, tspd=6+Math.random()*10;
+  var tname='TGT '+String(ti+1).padStart(2,'0');
+  makeTargetShip(tx,tz,tcrs,tspd,tname,tgtColors[ti%tgtColors.length]);
+}
+
+// =============================================
+// RAIN PARTICLES
+// =============================================
+var rainGroup   = null;
+var rainActive  = false;
+
+function createRain() {
+  if (rainGroup) { scene.remove(rainGroup); rainGroup=null; }
+  var geo = new THREE.BufferGeometry();
+  var count = 2000;
+  var positions = new Float32Array(count*3);
+  for (var ri2=0;ri2<count;ri2++) {
+    positions[ri2*3]   = (Math.random()-0.5)*600;
+    positions[ri2*3+1] = Math.random()*300;
+    positions[ri2*3+2] = (Math.random()-0.5)*600;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  var mat=new THREE.PointsMaterial({color:0xaabbcc,size:0.6,transparent:true,opacity:0.5});
+  rainGroup=new THREE.Points(geo,mat);
+  scene.add(rainGroup);
+}
+
+// =============================================
+// MOB LIGHT
+// =============================================
+var mobLightMesh = null;
+var mobFlash     = false;
+
+function showMOBLight() {
+  showMOB=!showMOB;
+  if (showMOB) {
+    if (!mobLightMesh) {
+      var mg2=new THREE.SphereGeometry(3,8,8);
+      var mm2=new THREE.MeshBasicMaterial({color:0xff6600});
+      mobLightMesh=new THREE.Mesh(mg2,mm2);
+      mobLightMesh.position.set(-80,2,100);
+      scene.add(mobLightMesh);
+    }
+    mobLightMesh.visible=true;
+    addAlarm('MOB LIGHT ACTIVATED');
+    document.getElementById('btnMOB').classList.add('on');
+  } else {
+    if (mobLightMesh) mobLightMesh.visible=false;
+    document.getElementById('btnMOB').classList.remove('on');
+  }
+}
+
+// =============================================
+// CAMERA VIEWS
+// =============================================
+var camAngle = 0; // rotation around Y for all-round view
+
+function setView(dir) {
+  viewDir=dir;
+  ['vBow','vStern','vPort','vStbd'].forEach(function(id){document.getElementById(id).classList.remove('on');});
+  var map={BOW:'vBow',STERN:'vStern',PORT:'vPort',STBD:'vStbd'};
+  document.getElementById(map[dir]).classList.add('on');
+  document.getElementById('h-view').textContent=dir;
+  updateCamera();
+}
+
+// ── Binoculars state ─────────────────────────────────────
+var binoActive   = false;
+var binoDir      = 0;     // bearing binoculars are pointed (degrees)
+var crossBrgActive = false;
+var crossBrgAngle  = 0;   // bearing of the cross-bearing line (degrees)
+
+function toggleBinoculars() {
+  binoActive = !binoActive;
+  var btn = document.getElementById('vBino');
+  if (binoActive) {
+    btn.classList.add('on');
+    document.getElementById('binoOverlay').style.display = 'block';
+    document.getElementById('crossBrgCtrl').style.display = 'block';
+    setViewMode('BINO');
+  } else {
+    btn.classList.remove('on');
+    document.getElementById('binoOverlay').style.display = 'none';
+    setViewMode('BRIDGE');
+  }
+}
+
+function toggleCrossBearing() {
+  crossBrgActive = !crossBrgActive;
+  var btn = document.getElementById('btnCrossBrg');
+  var overlay = document.getElementById('crossBearingOverlay');
+  var ctrl = document.getElementById('crossBrgCtrl');
+  if (crossBrgActive) {
+    btn.classList.add('on');
+    btn.style.color = '#ffdd00';
+    btn.style.borderColor = '#ffdd00';
+    overlay.style.display = 'block';
+    ctrl.style.display = 'block';
+  } else {
+    btn.classList.remove('on');
+    btn.style.color = '#ffdd00';
+    btn.style.borderColor = '#886600';
+    overlay.style.display = 'none';
+    if (!binoActive) ctrl.style.display = 'none';
+  }
+}
+
+function setCrossBearing(val) {
+  crossBrgAngle = parseFloat(val);
+  document.getElementById('cbVal').textContent = String(Math.round(crossBrgAngle)).padStart(3,'0') + '°';
+  updateCrossBearingLine();
+}
+
+function updateCrossBearingLine() {
+  if (!crossBrgActive) return;
+  var line = document.getElementById('cbBearing');
+  var label = document.getElementById('cbLabel');
+  var W2 = document.getElementById('canvasWrap').clientWidth;
+  var H2 = document.getElementById('canvasWrap').clientHeight;
+  var cx = W2/2, cy = H2/2;
+  // Convert bearing angle to canvas angle (0°=up, clockwise)
+  var rad = (crossBrgAngle - 90) * Math.PI / 180;
+  var len = Math.max(W2, H2);
+  var x2 = cx + Math.cos(rad)*len;
+  var y2 = cy + Math.sin(rad)*len;
+  var x1 = cx - Math.cos(rad)*len;
+  var y1 = cy - Math.sin(rad)*len;
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  var lx = cx + Math.cos(rad)*len*0.4;
+  var ly = cy + Math.sin(rad)*len*0.4 - 8;
+  label.setAttribute('x', lx); label.setAttribute('y', ly);
+  label.textContent = 'BRG ' + String(Math.round(crossBrgAngle)).padStart(3,'0') + '°';
+}
+
+function setBinoDir(val) {
+  binoDir = parseFloat(val);
+  document.getElementById('binoDirVal').textContent = String(Math.round(binoDir)).padStart(3,'0') + '°';
+  // Rotate camera for binoculars view around the bridge point
+  if (binoActive) {
+    var h = camHeight, far = 2000;
+    var rad = binoDir * Math.PI / 180;
+    var tx = Math.sin(rad)*far;
+    var tz = -Math.cos(rad)*far;
+    camera.position.set(0, h, 8);
+    camera.lookAt(tx, h-5, tz);
+    document.getElementById('h-view').textContent = String(Math.round(binoDir)).padStart(3,'0')+'°';
+    document.getElementById('binoBrg') && (document.getElementById('binoBrg').textContent = 'BEARING ' + String(Math.round(binoDir)).padStart(3,'0') + '°T');
+  }
+}
+
+function setViewMode(mode) {
+  viewMode=mode;
+  ['vBridge','vAllRnd'].forEach(function(id){document.getElementById(id).classList.remove('on');});
+  if (mode==='BRIDGE') document.getElementById('vBridge').classList.add('on');
+  if (mode==='ALLROUND') document.getElementById('vAllRnd').classList.add('on');
+  document.getElementById('h-mode').textContent = mode==='BINO' ? 'BINO' : mode;
+  updateCamera();
+}
+
+function updateCamera() {
+  var h=camHeight, far=2000;
+  if (viewMode === 'BINO') {
+    // Binoculars: narrow FOV, look in binoDir direction
+    var rad = binoDir * Math.PI / 180;
+    camera.position.set(0, h, 8);
+    camera.lookAt(Math.sin(rad)*far, h-5, -Math.cos(rad)*far);
+    camera.fov = 8;
+    camera.updateProjectionMatrix();
+    return;
+  }
+  camera.fov = fov; camera.updateProjectionMatrix();
+  if (viewDir==='BOW')   { camera.position.set(0,h, 8); camera.lookAt(0,h-5,-far); }
+  if (viewDir==='STERN') { camera.position.set(0,h, 8); camera.lookAt(0,h-5, far+200); }
+  if (viewDir==='PORT')  { camera.position.set(0,h, 8); camera.lookAt(-far,h-5,8); }
+  if (viewDir==='STBD')  { camera.position.set(0,h, 8); camera.lookAt( far,h-5,8); }
+}
+
+function setFOV(val) {
+  fov=parseFloat(val);
+  document.getElementById('fovVal').textContent=val+'°';
+  if (viewMode!=='BINO') { camera.fov=fov; camera.updateProjectionMatrix(); }
+}
+
+function setCamHeight(val) {
+  camHeight=parseFloat(val);
+  document.getElementById('hgtVal').textContent=val+'m';
+  updateCamera();
+}
+
+// =============================================
+// DAY / NIGHT
+// =============================================
+var skyColors={
+  DAY:   {sky:0x87ceeb, fog:0x88aacc, ambient:0.7,  sun:1.2,  fogFar:true},
+  DUSK:  {sky:0x884422, fog:0x664422, ambient:0.3,  sun:0.6,  fogFar:false},
+  NIGHT: {sky:0x040818, fog:0x040c18, ambient:0.05, sun:0.02, fogFar:false}
+};
+
+function setDayNight(mode) {
+  timeOfDay=mode;
+  ['mDay','mDusk','mNight'].forEach(function(id){document.getElementById(id).classList.remove('on');});
+  var map={DAY:'mDay',DUSK:'mDusk',NIGHT:'mNight'};
+  document.getElementById(map[mode]).classList.add('on');
+  document.getElementById('h-mode').textContent=mode;
+
+  var cfg=skyColors[mode];
+  skyMesh.material.color.setHex(cfg.sky);
+  scene.fog.color.setHex(cfg.fog);
+  ambientLight.intensity=cfg.ambient;
+  sunLight.intensity=cfg.sun;
+  scene.fog.far = cfg.fogFar ? visibility*1852 : Math.min(visibility*1852,3000);
+
+  // Toggle buoy and nav lights
+  scene.traverse(function(obj) {
+    if (obj.name==='buoy_light'||obj.name.indexOf('tgt_')===0) {
+      obj.intensity = (mode==='NIGHT'?1.5:mode==='DUSK'?0.8:0);
+    }
+  });
+
+  // Stars for night
+  updateStars(mode==='NIGHT');
+}
+
+var starField = null;
+function updateStars(show) {
+  if (starField) { scene.remove(starField); starField=null; }
+  if (!show) return;
+  var geo=new THREE.BufferGeometry();
+  var count=2000;
+  var pos=new Float32Array(count*3);
+  for (var si2=0;si2<count;si2++) {
+    var theta=Math.random()*Math.PI*2, phi=Math.random()*Math.PI*0.5;
+    var r=6000;
+    pos[si2*3]=r*Math.sin(phi)*Math.cos(theta);
+    pos[si2*3+1]=r*Math.cos(phi);
+    pos[si2*3+2]=r*Math.sin(phi)*Math.sin(theta);
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  var mat=new THREE.PointsMaterial({color:0xffffff,size:3,transparent:true,opacity:0.9});
+  starField=new THREE.Points(geo,mat);
+  scene.add(starField);
+}
+
+// =============================================
+// WEATHER
+// =============================================
+function setWeather(mode) {
+  weatherMode=mode;
+  ['wCalm','wMod','wHeavy'].forEach(function(id){document.getElementById(id).classList.remove('on');});
+  var map={CALM:'wCalm',MODERATE:'wMod',HEAVY:'wHeavy'};
+  document.getElementById(map[mode]).classList.add('on');
+  waveHeight = mode==='CALM'?0.2:mode==='MODERATE'?1.2:3.0;
+  seaMat.color.setHex(mode==='CALM'?0x0077aa:mode==='MODERATE'?0x005588:0x003366);
+}
+
+function setVisibility(nm) {
+  visibility=nm;
+  ['wGood','wMist','wFog'].forEach(function(id){document.getElementById(id).classList.remove('on');});
+  if (nm>=10) document.getElementById('wGood').classList.add('on');
+  else if (nm>=1) document.getElementById('wMist').classList.add('on');
+  else document.getElementById('wFog').classList.add('on');
+  scene.fog.far=nm*1852;
+  document.getElementById('h-vis').textContent=nm<1?nm.toFixed(1)+' NM':nm+' NM';
+  document.getElementById('sh-vis').textContent=nm<1?nm.toFixed(1)+' NM':nm+' NM';
+  if (nm<1) addAlarm('RESTRICTED VISIBILITY: '+nm.toFixed(1)+' NM — FOG SIGNAL REQUIRED');
+}
+
+// =============================================
+// NAV LIGHTS
+// =============================================
+function toggleLights() {
+  showLights=!showLights;
+  var btn=document.getElementById('btnLights');
+  btn.textContent=showLights?'LIGHTS ON':'LIGHTS OFF';
+  btn.classList.toggle('on',showLights);
+  Object.keys(navLightMeshes).forEach(function(k) {
+    var obj=navLightMeshes[k];
+    if (k.indexOf('pt_')===0) {
+      obj.intensity=showLights?1.5:0;
+    } else if (k!=='flare'&&k!=='mob') {
+      obj.material.visible=showLights;
+    }
+  });
+}
+
+function toggleFlares() {
+  showFlares=!showFlares;
+  document.getElementById('btnFlares').classList.toggle('on',showFlares);
+  if (navLightMeshes['flare']) {
+    navLightMeshes['flare'].material.visible=showFlares;
+    if (navLightMeshes['pt_flare']) navLightMeshes['pt_flare'].intensity=showFlares?3:0;
+  }
+  if (showFlares) addAlarm('DISTRESS FLARE ACTIVATED');
+}
+
+// =============================================
+// RAIN / LIGHTNING
+// =============================================
+function toggleRain() {
+  showRain=!showRain;
+  var btn=document.getElementById('btnRain');
+  btn.textContent=showRain?'RAIN ON':'RAIN OFF';
+  btn.classList.toggle('on',showRain);
+  if (showRain) createRain();
+  else if (rainGroup) { scene.remove(rainGroup); rainGroup=null; }
+}
+
+var lightningTimeout=null;
+function toggleLightning() {
+  showLightning=!showLightning;
+  document.getElementById('btnLgtnng').classList.toggle('on',showLightning);
+}
+
+function triggerLightning() {
+  ambientLight.intensity+=3;
+  setTimeout(function(){ambientLight.intensity=skyColors[timeOfDay].ambient;},80);
+  setTimeout(function(){ambientLight.intensity+=2;},120);
+  setTimeout(function(){ambientLight.intensity=skyColors[timeOfDay].ambient;},180);
+}
+
+// =============================================
+// TARGET LABELS
+// =============================================
+function toggleTargetLabels() {
+  showTgtLabels=!showTgtLabels;
+  document.getElementById('btnTgtLbl').classList.toggle('on',showTgtLabels);
+  document.getElementById('targetLabels').style.display=showTgtLabels?'block':'none';
+}
+
+function updateTargetLabels() {
+  if (!showTgtLabels) return;
+  var labelDiv=document.getElementById('targetLabels');
+  labelDiv.innerHTML='';
+  targets3D.forEach(function(t) {
+    var vec=new THREE.Vector3(t.position.x, t.position.y+25, t.position.z);
+    vec.project(camera);
+    var x=(vec.x*0.5+0.5)*W, y=(-vec.y*0.5+0.5)*H;
+    if (vec.z>1||x<0||x>W||y<0||y>H) return;
+    var lbl=document.createElement('div');
+    var dist=Math.sqrt(t.position.x*t.position.x+t.position.z*t.position.z)/1852;
+    lbl.style.cssText='position:absolute;left:'+(x-35)+'px;top:'+(y-8)+'px;background:rgba(0,20,40,0.8);border:1px solid #00ccff;padding:2px 5px;font-size:9px;color:#00ccff;border-radius:2px;white-space:nowrap;pointer-events:none;';
+    lbl.textContent=t.userData.name+' '+dist.toFixed(1)+'NM';
+    labelDiv.appendChild(lbl);
+  });
+}
+
+// =============================================
+// COMPASS HUD
+// =============================================
+var compassCanvas=document.getElementById('compassHUD');
+var compassCtx=compassCanvas.getContext('2d');
+compassCanvas.width=90; compassCanvas.height=90;
+
+function drawCompassHUD() {
+  var cc2=compassCtx, w=90, h=90, cx2=45, cy2=45, R=38;
+  cc2.clearRect(0,0,w,h);
+  cc2.fillStyle='rgba(4,10,20,0.8)'; cc2.beginPath(); cc2.arc(cx2,cy2,R+3,0,Math.PI*2); cc2.fill();
+  cc2.strokeStyle='#0d2a45'; cc2.lineWidth=1.5; cc2.stroke();
+  // Rose
+  cc2.save(); cc2.translate(cx2,cy2); cc2.rotate(-ownHdg*Math.PI/180);
+  for (var db=0;db<360;db+=10) {
+    var br=db*Math.PI/180;
+    var inner=db%30===0?R-10:R-6;
+    cc2.strokeStyle=db%30===0?'#3a7a9a':'#0d3a5a'; cc2.lineWidth=db%30===0?1.2:0.8;
+    cc2.beginPath(); cc2.moveTo(Math.sin(br)*inner,-Math.cos(br)*inner); cc2.lineTo(Math.sin(br)*R,-Math.cos(br)*R); cc2.stroke();
+    if (db%90===0) {
+      var lx=Math.sin(br)*(R-16), ly=-Math.cos(br)*(R-16);
+      var lbl=db===0?'N':db===90?'E':db===180?'S':'W';
+      cc2.fillStyle=db===0?'#ff4444':'#4a8ab0'; cc2.font='bold 9px Rajdhani'; cc2.textAlign='center'; cc2.textBaseline='middle';
+      cc2.fillText(lbl,lx,ly);
+    }
+  }
+  cc2.restore();
+  // Lubber line
+  cc2.strokeStyle='#ff4444'; cc2.lineWidth=2;
+  cc2.beginPath(); cc2.moveTo(cx2,cy2-R+2); cc2.lineTo(cx2,cy2-R+12); cc2.stroke();
+  // Heading text
+  cc2.fillStyle='#00ff9d'; cc2.font='bold 10px Share Tech Mono'; cc2.textAlign='center'; cc2.textBaseline='middle';
+  cc2.fillText(String(Math.round(ownHdg)).padStart(3,'0')+'°',cx2,cy2+2);
+}
+
+// =============================================
+// ALARMS
+// =============================================
+function addAlarm(msg) {
+  for (var i=0;i<alarms.length;i++){if(alarms[i]===msg)return;}
+  alarms.push(msg);
+  document.getElementById('almBanner').textContent='⚠ '+msg;
+  document.getElementById('almBanner').style.display='block';
+  setTimeout(function(){document.getElementById('almBanner').style.display='none';},4000);
+}
+
+// =============================================
+// ANIMATION LOOP
+// =============================================
+var clock=new THREE.Clock();
+var frameCount=0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  var elapsed=clock.getElapsedTime();
+  var delta=clock.getDelta()===0?0.016:Math.min(clock.getDelta(),0.1);
+  frameCount++;
+
+  // Wave animation
+  var wavePts=seaGeo.attributes.position;
+  for (var wi=0;wi<wavePts.count;wi++) {
+    var wx=wavePts.getX(wi), wz=wavePts.getZ(wi);
+    var ny=origSeaY[wi]+Math.sin(elapsed*1.2+wx*0.05+wz*0.03)*waveHeight
+      +Math.sin(elapsed*0.8+wx*0.03-wz*0.05)*waveHeight*0.5;
+    wavePts.setY(wi,ny);
+  }
+  wavePts.needsUpdate=true;
+  seaGeo.computeVertexNormals();
+
+  // Rotate radar scanner
+  shipGroup.traverse(function(obj){if(obj.name==='radar_scanner')obj.rotation.y+=0.05;});
+
+  // Move clouds
+  cloudGroup.children.forEach(function(c,i){c.position.x+=0.05*(i%2===0?1:-1);if(Math.abs(c.position.x)>3000)c.position.x=-c.position.x;});
+
+  // Move AIS targets
+  targets3D.forEach(function(t) {
+    var spd=t.userData.speed*0.514*0.016; // knots to m/s * deltaT
+    var rot=-t.rotation.y;
+    t.position.x+=Math.sin(rot)*spd;
+    t.position.z-=Math.cos(rot)*spd;
+    // Respawn if too far
+    if (Math.abs(t.position.x)>2000||Math.abs(t.position.z)>2000) {
+      t.position.set((Math.random()-0.5)*400,-0,-200-Math.random()*600);
+    }
+    // Flicker nav lights at night
+    if (timeOfDay==='NIGHT') {
+      t.traverse(function(obj){if(obj.name&&obj.name.indexOf('tgt_')===0){obj.intensity=1.2+Math.sin(elapsed*8+t.position.x)*0.3;}});
+    }
+  });
+
+  // Ship heave/roll in heavy weather
+  if (weatherMode!=='CALM') {
+    var intensity=weatherMode==='HEAVY'?0.4:0.15;
+    shipGroup.rotation.z=Math.sin(elapsed*0.8)*intensity;
+    shipGroup.rotation.x=Math.sin(elapsed*0.5)*intensity*0.5;
+    camera.position.y=camHeight+Math.sin(elapsed*0.8)*intensity*2;
+  } else {
+    shipGroup.rotation.z=0; shipGroup.rotation.x=0;
+    camera.position.y=camHeight;
+  }
+
+  // Rain
+  if (rainGroup) {
+    var rPos=rainGroup.geometry.attributes.position;
+    for (var ri3=0;ri3<rPos.count;ri3++) {
+      rPos.setY(ri3,rPos.getY(ri3)-8);
+      if (rPos.getY(ri3)<0) rPos.setY(ri3,300);
+    }
+    rPos.needsUpdate=true;
+  }
+
+  // Lightning
+  if (showLightning && frameCount%120===0) triggerLightning();
+
+  // MOB light pulse
+  if (mobLightMesh && mobLightMesh.visible) {
+    var pulse=Math.sin(elapsed*4)>0?0xff6600:0x000000;
+    mobLightMesh.material.color.setHex(pulse);
+  }
+
+  // All-round rotation
+  if (viewMode==='ALLROUND') {
+    camAngle+=0.003;
+    var ar=600;
+    camera.position.set(Math.sin(camAngle)*ar,camHeight,Math.cos(camAngle)*ar-50);
+    camera.lookAt(0,20,-50);
+  }
+
+  // Sea colour variation
+  seaMat.specular.setHSL(0.55, 0.5, 0.3+Math.sin(elapsed*0.3)*0.1);
+
+  // Update HUD
+  if (frameCount%10===0) {
+    drawCompassHUD();
+    updateTargetLabels();
+    updateHUD();
+    if(crossBrgActive) updateCrossBearingLine();
+  }
+
+  renderer.render(scene, camera);
+}
+
+function updateHUD() {
+  document.getElementById('h-hdg').textContent = ownHdg.toFixed(1)+'°';
+  document.getElementById('h-sog').textContent = ownSog.toFixed(1)+' kts';
+  document.getElementById('h-wind').textContent= windDir+'° '+windSpd+'kts';
+  document.getElementById('h-dep').textContent = ownDepth.toFixed(1)+'m';
+  document.getElementById('sh-hdg').textContent= ownHdg.toFixed(1)+'°';
+  document.getElementById('sh-sog').textContent= ownSog.toFixed(1)+' kts';
+  document.getElementById('sh-dep').textContent= ownDepth.toFixed(1)+' / '+ownUKC.toFixed(1)+'m';
+  document.getElementById('sh-wind').textContent=windDir+'° '+windSpd+'kts';
+}
+
+// =============================================
+// BROADCAST CHANNEL
+// =============================================
+try {
+  var bc=new BroadcastChannel('btm_sim');
+  bc.onmessage=function(e) {
+    var d=e.data; if(!d)return;
+    if (d.type==='STATE_UPDATE'&&d.data) {
+      if (d.data.position) {
+        ownHdg=d.data.position.hdg||ownHdg;
+        ownSog=d.data.position.sog||ownSog;
+      }
+      if (d.data.weather) {
+        var w=d.data.weather;
+        windDir=w.windDir||windDir; windSpd=w.windSpd||windSpd;
+        if (w.visibility!==undefined) setVisibility(w.visibility);
+        if (w.waveHt!==undefined) waveHeight=w.waveHt;
+        if (w.fog) setVisibility(0.2);
+        if (w.timeOfDay) {
+          if (w.timeOfDay.indexOf('Night')>=0||w.timeOfDay.indexOf('night')>=0) setDayNight('NIGHT');
+          else if (w.timeOfDay.indexOf('Dusk')>=0||w.timeOfDay.indexOf('Dawn')>=0) setDayNight('DUSK');
+          else setDayNight('DAY');
+        }
+      }
+    }
+    if (d.type==='INJECT') {
+      var inj=d.data.inject;
+      if (inj==='fog')   setVisibility(0.2);
+      if (inj==='storm') { setWeather('HEAVY'); windSpd=45; }
+      if (inj==='mob')   showMOBLight();
+    }
+    if (d.type==='MOB') showMOBLight();
+    if (d.type==='SIM_PAUSE'||d.type==='FREEZE') isPaused=true;
+    if (d.type==='SIM_RESUME'||d.type==='SIM_START') isPaused=false;
+    if (d.type==='CONNING_STATE'&&d.data) {
+      ownHdg=d.data.hdg||ownHdg; ownSog=d.data.sog||ownSog;
+      // Rotate own ship group to match heading (world N=0)
+      shipGroup.rotation.y=0;
+    }
+  };
+  bc.postMessage({type:'STATION_PING',data:{station:'visual'}});
+} catch(e){}
+
+// =============================================
+// CLOCK
+// =============================================
+function updateClock() {
+  var now=new Date();
+  var ts=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0')+':'+String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('hudClock').textContent=ts+' UTC';
+}
+setInterval(updateClock,1000); updateClock();
+
+// =============================================
+// RESIZE
+// =============================================
+window.addEventListener('resize',function() {
+  W=wrap.clientWidth; H=wrap.clientHeight;
+  renderer.setSize(W,H);
+  camera.aspect=W/H;
+  camera.updateProjectionMatrix();
+});
+
+// =============================================
+// KEYBOARD
+// =============================================
+document.addEventListener('keydown',function(e) {
+  if (e.key==='1') setView('BOW');
+  if (e.key==='2') setView('STERN');
+  if (e.key==='3') setView('PORT');
+  if (e.key==='4') setView('STBD');
+  if (e.key==='b'||e.key==='B') toggleBinoculars();
+  if (e.key==='x'||e.key==='X') toggleCrossBearing();
+  if (e.key==='n'||e.key==='N') setDayNight(timeOfDay==='NIGHT'?'DAY':'NIGHT');
+  if (e.key==='l'||e.key==='L') toggleLights();
+  if (e.key==='r'||e.key==='R') toggleRain();
+});
+
+// =============================================
+// INIT
+// =============================================
+setDayNight('DAY');
+setWeather('CALM');
+animate();
+</script>
+
+<div id="branding"><span>CASY SIMULATIONS</span></div>
+
+
+</body></html>

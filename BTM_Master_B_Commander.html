@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTM Bridge Simulator — Master Station B | Simulator Commander</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg-deep:   #060b10;
+    --bg-panel:  #0a1520;
+    --bg-card:   #0d1e2e;
+    --bg-input:  #071018;
+    --border:    #1a3a55;
+    --accent:    #00d4ff;
+    --accent2:   #00ff9d;
+    --accent3:   #ff6b35;
+    --warn:      #ffd700;
+    --danger:    #ff3b3b;
+    --text-hi:   #e8f4ff;
+    --text-md:   #7ab3d4;
+    --text-lo:   #3a6a8a;
+    --green-led: #00ff88;
+    --red-led:   #ff2244;
+    --amber-led: #ffaa00;
+    --mono:      'Share Tech Mono', monospace;
+    --head:      'Rajdhani', sans-serif;
+    --body:      'Exo 2', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-hi);
+    font-family: var(--body);
+    font-size:13px;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+    pointer-events:none; z-index:9999;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    background: linear-gradient(90deg,#060e18 0%,#091929 50%,#060e18 100%);
+    border-bottom:1px solid var(--border);
+    padding:6px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .tb-logo { font-family:var(--head); font-size:18px; font-weight:700; letter-spacing:3px; color:var(--accent); }
+  .tb-logo span { color:var(--accent2); }
+  .tb-title { font-family:var(--head); font-size:14px; font-weight:600; letter-spacing:2px; color:var(--text-md); text-transform:uppercase; }
+  .tb-clock { font-family:var(--mono); font-size:15px; color:var(--accent); min-width:140px; text-align:right; }
+  .led { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; box-shadow:0 0 6px currentColor; }
+  .led.green { background:var(--green-led); color:var(--green-led); }
+  .led.red   { background:var(--red-led);   color:var(--red-led); }
+  .led.amber { background:var(--amber-led); color:var(--amber-led); }
+  .led.off   { background:var(--text-lo);   color:var(--text-lo); box-shadow:none; }
+  .led-label { font-family:var(--mono); font-size:11px; color:var(--text-md); margin-right:10px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .blink { animation:blink 1s infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 6px currentColor} 50%{box-shadow:0 0 20px currentColor} }
+  .pulse { animation:pulse 2s infinite; }
+
+  /* ── LAYOUT ── */
+  #main { display:grid; grid-template-columns:300px 1fr 280px; height:calc(100vh - 44px); }
+
+  /* ── PANELS ── */
+  .panel { background:var(--bg-panel); border-right:1px solid var(--border); overflow-y:auto; padding:10px; }
+  .panel.right { border-right:none; border-left:1px solid var(--border); }
+
+  .panel-hdr {
+    font-family:var(--head); font-size:13px; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:var(--accent); border-bottom:1px solid var(--border);
+    padding:6px 4px; margin-bottom:8px; display:flex; align-items:center; gap:8px;
+  }
+  .panel-hdr .dot { width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent); }
+
+  .card { background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:10px; margin-bottom:8px; }
+  .card-title { font-family:var(--head); font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--text-md); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  label { font-family:var(--mono); font-size:10px; color:var(--text-lo); display:block; margin-bottom:3px; letter-spacing:1px; }
+  select, input[type=text], input[type=number] {
+    width:100%; background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-hi); font-family:var(--mono); font-size:12px;
+    padding:5px 8px; border-radius:3px; outline:none; transition:border-color .2s;
+    appearance:none;
+  }
+  select:focus, input:focus { border-color:var(--accent); }
+  select option { background:var(--bg-deep); }
+  .form-group { margin-bottom:6px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px; }
+
+  input[type=range] { width:100%; accent-color:var(--accent); cursor:pointer; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family:var(--head); font-size:13px; font-weight:700; letter-spacing:1.5px;
+    text-transform:uppercase; padding:8px 16px; border-radius:4px; border:1px solid;
+    cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn:active { transform:scale(0.97); }
+  .btn-accent { background:rgba(0,212,255,0.12); border-color:var(--accent); color:var(--accent); }
+  .btn-accent:hover { background:rgba(0,212,255,0.28); box-shadow:0 0 16px rgba(0,212,255,0.35); }
+  .btn-green { background:rgba(0,255,157,0.12); border-color:var(--accent2); color:var(--accent2); }
+  .btn-green:hover { background:rgba(0,255,157,0.28); box-shadow:0 0 16px rgba(0,255,157,0.35); }
+  .btn-danger { background:rgba(255,59,59,0.12); border-color:var(--danger); color:var(--danger); }
+  .btn-danger:hover { background:rgba(255,59,59,0.28); box-shadow:0 0 16px rgba(255,59,59,0.35); }
+  .btn-warn { background:rgba(255,215,0,0.12); border-color:var(--warn); color:var(--warn); }
+  .btn-warn:hover { background:rgba(255,215,0,0.28); box-shadow:0 0 16px rgba(255,215,0,0.35); }
+  .btn-gray { background:rgba(58,106,138,0.2); border-color:var(--text-lo); color:var(--text-md); }
+  .btn-gray:hover { background:rgba(58,106,138,0.35); }
+  .btn-full { width:100%; }
+  .btn-lg { font-size:16px; padding:14px 20px; }
+  .btn-sm { font-size:11px; padding:5px 10px; }
+  .btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; }
+
+  /* ── CENTER ── */
+  #center { background:var(--bg-deep); overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:12px; }
+
+  /* ── BIG CLOCK ── */
+  #bigClock {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:6px;
+    padding:18px; text-align:center;
+  }
+  .sim-time-label { font-family:var(--mono); font-size:11px; color:var(--text-lo); letter-spacing:3px; margin-bottom:6px; }
+  #simTimeDisplay {
+    font-family:var(--mono); font-size:52px; color:var(--accent2);
+    text-shadow:0 0 24px var(--accent2); letter-spacing:6px; line-height:1;
+  }
+  #simSpeedDisplay { font-family:var(--mono); font-size:13px; color:var(--warn); margin-top:6px; letter-spacing:2px; }
+  #simStatusBadge {
+    display:inline-block; padding:4px 16px; border-radius:20px; font-family:var(--head);
+    font-size:13px; font-weight:700; letter-spacing:2px; margin-top:8px;
+    border:1px solid; text-transform:uppercase;
+  }
+  .badge-ready  { background:rgba(0,212,255,0.1); border-color:var(--accent); color:var(--accent); }
+  .badge-run    { background:rgba(0,255,157,0.15); border-color:var(--accent2); color:var(--accent2); }
+  .badge-paused { background:rgba(255,215,0,0.12); border-color:var(--warn); color:var(--warn); }
+  .badge-stop   { background:rgba(255,59,59,0.12); border-color:var(--danger); color:var(--danger); }
+  .badge-record { background:rgba(255,59,59,0.18); border-color:var(--danger); color:var(--danger); }
+
+  /* ── MASTER CONTROLS ── */
+  #masterControls {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+  }
+  #masterControls .btn { font-size:14px; padding:16px 10px; flex-direction:column; gap:4px; }
+  #masterControls .btn-icon { font-size:22px; line-height:1; }
+  #masterControls .btn-sub { font-size:10px; font-weight:400; color:inherit; opacity:0.7; letter-spacing:1px; }
+
+  /* ── SPEED CONTROL ── */
+  #speedRow { display:flex; align-items:center; gap:10px; }
+  .speed-btn {
+    font-family:var(--mono); font-size:16px; width:36px; height:36px;
+    border-radius:4px; border:1px solid var(--border); background:var(--bg-card);
+    color:var(--accent); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:all .15s;
+  }
+  .speed-btn:hover { border-color:var(--accent); background:rgba(0,212,255,0.1); }
+  .speed-track { flex:1; position:relative; height:6px; background:var(--border); border-radius:3px; cursor:pointer; }
+  .speed-fill { height:100%; background:var(--accent); border-radius:3px; transition:width .2s; }
+  .speed-thumb { position:absolute; top:50%; width:16px; height:16px; background:var(--accent); border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 8px var(--accent); }
+  #speedLabel { font-family:var(--mono); font-size:16px; color:var(--warn); min-width:50px; text-align:center; }
+
+  /* ── REPLAY SCRUBBER ── */
+  #replayBar { display:flex; align-items:center; gap:8px; }
+  #scrubber { flex:1; accent-color:var(--warn); }
+  #replayTime { font-family:var(--mono); font-size:12px; color:var(--warn); min-width:70px; }
+
+  /* ── SCENARIO LIST ── */
+  .scenario-item {
+    background:var(--bg-input); border:1px solid var(--border); border-radius:3px;
+    padding:8px 10px; margin-bottom:5px; cursor:pointer; transition:all .2s;
+    display:flex; align-items:center; gap:10px;
+  }
+  .scenario-item:hover { border-color:var(--accent); background:rgba(0,212,255,0.04); }
+  .scenario-item.active { border-color:var(--accent2); background:rgba(0,255,157,0.05); }
+  .sc-num { font-family:var(--mono); font-size:11px; color:var(--accent); min-width:28px; }
+  .sc-name { font-family:var(--head); font-size:13px; font-weight:600; color:var(--text-hi); flex:1; }
+  .sc-area { font-family:var(--mono); font-size:10px; color:var(--text-lo); }
+  .sc-diff {
+    font-family:var(--mono); font-size:10px; padding:2px 6px; border-radius:2px;
+    border:1px solid;
+  }
+  .sc-diff.easy   { color:var(--accent2); border-color:rgba(0,255,157,0.3); }
+  .sc-diff.medium { color:var(--warn);    border-color:rgba(255,215,0,0.3); }
+  .sc-diff.hard   { color:var(--danger);  border-color:rgba(255,59,59,0.3); }
+
+  /* ── STUDENT STATIONS ── */
+  .station-item {
+    background:var(--bg-input); border:1px solid var(--border); border-radius:3px;
+    padding:7px 10px; margin-bottom:5px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .st-name { font-family:var(--head); font-size:12px; font-weight:600; color:var(--text-hi); flex:1; }
+  .st-status { font-family:var(--mono); font-size:10px; }
+  .st-online  { color:var(--accent2); }
+  .st-offline { color:var(--text-lo); }
+  .st-actions { display:flex; gap:4px; }
+
+  /* ── RECORDING ── */
+  .rec-dot {
+    width:12px; height:12px; border-radius:50%;
+    background:var(--danger); display:inline-block;
+  }
+  .rec-dot.active { animation:pulse 1s infinite; color:var(--danger); box-shadow:0 0 10px var(--danger); }
+
+  /* ── EVENT LOG ── */
+  .evt-item {
+    padding:5px 8px; border-bottom:1px solid rgba(26,58,85,0.4);
+    display:flex; gap:8px; align-items:flex-start;
+  }
+  .evt-time { font-family:var(--mono); font-size:10px; color:var(--text-lo); min-width:60px; }
+  .evt-msg  { font-family:var(--mono); font-size:11px; color:var(--text-md); flex:1; }
+  .evt-msg.info   { color:var(--accent); }
+  .evt-msg.warn   { color:var(--warn); }
+  .evt-msg.danger { color:var(--danger); }
+  .evt-msg.ok     { color:var(--accent2); }
+
+  /* ── ASSESSMENT ── */
+  .assess-row { display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(26,58,85,0.3); }
+  .assess-label { font-family:var(--mono); font-size:11px; color:var(--text-md); }
+  .assess-score { font-family:var(--mono); font-size:13px; color:var(--accent2); }
+  .assess-bar { width:80px; height:4px; background:var(--border); border-radius:2px; margin-left:8px; }
+  .assess-fill { height:100%; border-radius:2px; background:var(--accent2); }
+
+  /* ── MINI MAP ── */
+  #miniMap { border:1px solid var(--border); border-radius:4px; background:var(--bg-input); position:relative; overflow:hidden; }
+
+  /* ── TIMER RING ── */
+  .ring-wrap { display:flex; justify-content:center; margin-bottom:8px; }
+
+  /* Scroll */
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  .toggle-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .toggle-label { font-family:var(--mono); font-size:11px; color:var(--text-md); }
+  .toggle { position:relative; width:40px; height:20px; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:var(--bg-input); border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:.3s; }
+  .toggle-slider::before { content:''; position:absolute; width:14px; height:14px; left:2px; bottom:2px; background:var(--text-lo); border-radius:50%; transition:.3s; }
+  .toggle input:checked + .toggle-slider { background:rgba(0,212,255,0.2); border-color:var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--accent); box-shadow:0 0 6px var(--accent); }
+
+  .sec-hdr { font-family:var(--head); font-size:14px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--accent); border-left:3px solid var(--accent); padding-left:10px; margin-bottom:8px; }
+
+  .digi { background:var(--bg-input); border:1px solid var(--border); border-radius:3px; font-family:var(--mono); font-size:14px; color:var(--accent2); text-align:center; padding:5px 4px; text-shadow:0 0 8px var(--accent2); letter-spacing:2px; }
+
+  /* Confirm overlay */
+  #confirmOverlay {
+    display:none; position:fixed; inset:0; background:rgba(6,11,16,0.88);
+    z-index:1000; align-items:center; justify-content:center;
+  }
+  #confirmOverlay.show { display:flex; }
+  #confirmBox {
+    background:var(--bg-card); border:1px solid var(--danger); border-radius:8px;
+    padding:30px; max-width:420px; width:90%; text-align:center;
+  }
+  #confirmTitle { font-family:var(--head); font-size:20px; font-weight:700; color:var(--danger); margin-bottom:10px; letter-spacing:2px; }
+  #confirmMsg { font-family:var(--mono); font-size:13px; color:var(--text-md); margin-bottom:20px; line-height:1.6; }
+  .confirm-btns { display:flex; gap:10px; justify-content:center; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-logo">BTM<span>SIM</span></div>
+  <div class="tb-title">Master Station B — Simulator Commander</div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <span class="led" id="led-masterA" style="background:var(--text-lo);color:var(--text-lo);box-shadow:none;"></span><span class="led-label">STN-A</span>
+    <span class="led" id="led-radar"   style="background:var(--text-lo);color:var(--text-lo);box-shadow:none;"></span><span class="led-label">RADAR</span>
+    <span class="led" id="led-conning" style="background:var(--text-lo);color:var(--text-lo);box-shadow:none;"></span><span class="led-label">CONN</span>
+    <span class="led" id="led-ecdis"   style="background:var(--text-lo);color:var(--text-lo);box-shadow:none;"></span><span class="led-label">ECDIS</span>
+    <span class="led" id="led-visual"  style="background:var(--text-lo);color:var(--text-lo);box-shadow:none;"></span><span class="led-label">VIS</span>
+    <div class="tb-clock" id="clock">--:--:-- UTC</div>
+  </div>
+</div>
+
+<div id="main">
+
+<!-- ═══════════════════════════════════
+     LEFT — SCENARIO LIBRARY
+═══════════════════════════════════ -->
+<div class="panel">
+
+  <div class="panel-hdr"><span class="dot"></span>Scenario Library</div>
+
+  <div class="form-group">
+    <label>SEARCH SCENARIOS</label>
+    <input type="text" id="scenarioSearch" placeholder="Type to filter..." oninput="filterScenarios()">
+  </div>
+  <div class="form-group">
+    <label>EXERCISE AREA</label>
+    <select id="areaFilter" onchange="filterScenarios()">
+      <option value="">All Areas</option>
+      <option>Bosphorus Strait</option>
+      <option>Dover Strait</option>
+      <option>Singapore Strait</option>
+      <option>Malacca Strait</option>
+      <option>Suez Canal</option>
+      <option>Panama Canal</option>
+      <option>Tokyo Bay</option>
+      <option>Rotterdam Approach</option>
+      <option>Gibraltar Strait</option>
+      <option>Open Ocean</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label>DIFFICULTY</label>
+    <select id="diffFilter" onchange="filterScenarios()">
+      <option value="">All Levels</option>
+      <option>Easy</option><option>Medium</option><option>Hard</option>
+    </select>
+  </div>
+
+  <div id="scenarioList" style="max-height:calc(100vh - 340px);overflow-y:auto;"></div>
+
+  <div style="display:flex;gap:6px;margin-top:6px;">
+    <button class="btn btn-accent btn-sm" style="flex:1" onclick="loadSelectedScenario()">▶ LOAD</button>
+    <button class="btn btn-sm btn-gray" onclick="showNewScenarioForm()">+ NEW</button>
+  </div>
+
+  <!-- Loaded scenario info -->
+  <div class="card" style="margin-top:8px;" id="loadedScenarioCard">
+    <div class="card-title">Loaded Scenario</div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text-md);" id="loadedScenarioInfo">No scenario loaded</div>
+  </div>
+
+</div><!-- end left -->
+
+
+<!-- ═══════════════════════════════════
+     CENTER — COMMANDER CONTROLS
+═══════════════════════════════════ -->
+<div id="center">
+
+  <!-- BIG SIM CLOCK -->
+  <div id="bigClock">
+    <div class="sim-time-label">▸ SIMULATION TIME ELAPSED</div>
+    <div id="simTimeDisplay">00 : 00 : 00</div>
+    <div id="simSpeedDisplay">SPEED × 1.0</div>
+    <div id="simStatusBadge" class="badge-ready">● READY</div>
+  </div>
+
+  <!-- MASTER CONTROL BUTTONS -->
+  <div class="sec-hdr">Master Controls</div>
+  <div id="masterControls">
+    <button class="btn btn-green btn-lg" id="btnStart" onclick="simStart()">
+      <span class="btn-icon">▶</span>
+      <span>START</span>
+      <span class="btn-sub">Begin Exercise</span>
+    </button>
+    <button class="btn btn-warn btn-lg" id="btnPause" onclick="simPause()" disabled>
+      <span class="btn-icon">⏸</span>
+      <span>PAUSE</span>
+      <span class="btn-sub">Freeze Scene</span>
+    </button>
+    <button class="btn btn-accent btn-lg" id="btnResume" onclick="simResume()" disabled>
+      <span class="btn-icon">▶▶</span>
+      <span>RESUME</span>
+      <span class="btn-sub">Continue</span>
+    </button>
+    <button class="btn btn-gray btn-lg" id="btnRestart" onclick="confirmAction('RESTART','This will restart the exercise from the beginning. All progress will be lost.',simRestart)">
+      <span class="btn-icon">↺</span>
+      <span>RESTART</span>
+      <span class="btn-sub">From Scratch</span>
+    </button>
+    <button class="btn btn-danger btn-lg" id="btnStop" onclick="confirmAction('STOP','This will fully stop the simulation and reset all stations.',simStop)" disabled>
+      <span class="btn-icon">■</span>
+      <span>STOP</span>
+      <span class="btn-sub">End Exercise</span>
+    </button>
+    <button class="btn btn-warn btn-lg" id="btnEmergency" onclick="triggerEmergencyFreeze()">
+      <span class="btn-icon">⚡</span>
+      <span>FREEZE</span>
+      <span class="btn-sub">Instant Pause</span>
+    </button>
+  </div>
+
+  <!-- SPEED CONTROL -->
+  <div class="card">
+    <div class="card-title">Simulation Speed</div>
+    <div id="speedRow">
+      <button class="speed-btn" onclick="changeSpeed(-1)">−</button>
+      <div class="speed-track" id="speedTrack" onclick="clickSpeedTrack(event)">
+        <div class="speed-fill" id="speedFill" style="width:20%"></div>
+        <div class="speed-thumb" id="speedThumb" style="left:20%"></div>
+      </div>
+      <button class="speed-btn" onclick="changeSpeed(1)">+</button>
+      <div id="speedLabel">×1</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--text-lo);">
+      <span>×0.25</span><span>×0.5</span><span>×1</span><span>×2</span><span>×4</span><span>×8</span>
+    </div>
+  </div>
+
+  <!-- RECORDING -->
+  <div class="card">
+    <div class="card-title">
+      <span class="rec-dot" id="recDot"></span>
+      Recording
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <button class="btn btn-danger btn-sm" id="btnRecord" onclick="toggleRecord()" style="flex:1">
+        ⏺ START RECORDING
+      </button>
+      <button class="btn btn-sm btn-gray" id="btnSaveRec" onclick="saveRecording()" disabled style="flex:1">
+        💾 SAVE
+      </button>
+    </div>
+    <div class="form-group">
+      <label>RECORDING NAME</label>
+      <input type="text" id="recName" value="Exercise_01_Bosphorus">
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;font-family:var(--mono);font-size:11px;color:var(--text-md);">
+      <span>REC TIME:</span>
+      <span id="recTime" style="color:var(--danger);">00:00:00</span>
+      <span style="margin-left:auto;">SIZE:</span>
+      <span id="recSize" style="color:var(--text-md);">0 KB</span>
+    </div>
+  </div>
+
+  <!-- REPLAY -->
+  <div class="card">
+    <div class="card-title">Replay &amp; Debrief</div>
+    <div class="form-group">
+      <label>LOAD RECORDING</label>
+      <select id="replaySelect">
+        <option value="">— Select Recording —</option>
+      </select>
+    </div>
+    <div id="replayBar" style="margin-bottom:8px;">
+      <button class="btn btn-sm btn-gray" onclick="replayRewind()">⏮</button>
+      <button class="btn btn-sm btn-accent" id="btnReplayPlay" onclick="toggleReplayPlay()">▶ PLAY</button>
+      <input type="range" id="scrubber" min="0" max="100" value="0" oninput="scrubReplay(this.value)">
+      <span id="replayTime">00:00 / 00:00</span>
+      <button class="btn btn-sm btn-gray" onclick="replayEnd()">⏭</button>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-sm btn-accent" style="flex:1" onclick="exportDebrief()">📊 EXPORT DEBRIEF</button>
+      <button class="btn btn-sm btn-gray"   style="flex:1" onclick="printDebrief()">🖨 PRINT REPORT</button>
+    </div>
+  </div>
+
+  <!-- ASSESSMENT -->
+  <div class="card">
+    <div class="card-title">Live Assessment</div>
+    <div id="assessGrid">
+      <div class="assess-row">
+        <span class="assess-label">Collision Avoidance</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <div class="assess-bar"><div class="assess-fill" id="af1" style="width:0%;background:var(--accent2)"></div></div>
+          <span class="assess-score" id="as1">—</span>
+        </div>
+      </div>
+      <div class="assess-row">
+        <span class="assess-label">Route Following</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <div class="assess-bar"><div class="assess-fill" id="af2" style="width:0%;background:var(--accent)"></div></div>
+          <span class="assess-score" id="as2">—</span>
+        </div>
+      </div>
+      <div class="assess-row">
+        <span class="assess-label">Engine Handling</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <div class="assess-bar"><div class="assess-fill" id="af3" style="width:0%;background:var(--warn)"></div></div>
+          <span class="assess-score" id="as3">—</span>
+        </div>
+      </div>
+      <div class="assess-row">
+        <span class="assess-label">Bridge Watchkeeping</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <div class="assess-bar"><div class="assess-fill" id="af4" style="width:0%;background:var(--accent2)"></div></div>
+          <span class="assess-score" id="as4">—</span>
+        </div>
+      </div>
+      <div class="assess-row">
+        <span class="assess-label">Emergency Response</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+          <div class="assess-bar"><div class="assess-fill" id="af5" style="width:0%;background:var(--danger)"></div></div>
+          <span class="assess-score" id="as5">—</span>
+        </div>
+      </div>
+      <div class="assess-row" style="border-bottom:none;margin-top:4px;">
+        <span class="assess-label" style="font-family:var(--head);font-size:13px;font-weight:700;color:var(--text-hi);">OVERALL SCORE</span>
+        <span class="assess-score" id="as-total" style="font-size:18px;color:var(--warn);">—</span>
+      </div>
+    </div>
+    <button class="btn btn-accent btn-sm btn-full" style="margin-top:8px;" onclick="calcAssessment()">↻ CALCULATE SCORES</button>
+  </div>
+
+</div><!-- end center -->
+
+
+<!-- ═══════════════════════════════════
+     RIGHT — STATIONS + EVENT LOG
+═══════════════════════════════════ -->
+<div class="panel right">
+
+  <!-- CONNECTED STATIONS -->
+  <div class="panel-hdr"><span class="dot"></span>Connected Stations</div>
+
+  <div class="card">
+    <div class="card-title">Station Status</div>
+    <div id="stationList">
+      <div class="station-item">
+        <span class="led green pulse"></span>
+        <span class="st-name">Master A — Ship Setup</span>
+        <span class="st-status st-online">ONLINE</span>
+      </div>
+      <div class="station-item">
+        <span class="led off" id="st-radar-led"></span>
+        <span class="st-name">Radar (X-Band)</span>
+        <span class="st-status st-offline" id="st-radar-txt">OFFLINE</span>
+      </div>
+      <div class="station-item">
+        <span class="led off" id="st-conning-led"></span>
+        <span class="st-name">Conning Display</span>
+        <span class="st-status st-offline" id="st-conning-txt">OFFLINE</span>
+      </div>
+      <div class="station-item">
+        <span class="led off" id="st-ecdis-led"></span>
+        <span class="st-name">ECDIS</span>
+        <span class="st-status st-offline" id="st-ecdis-txt">OFFLINE</span>
+      </div>
+      <div class="station-item">
+        <span class="led off" id="st-visual-led"></span>
+        <span class="st-name">3D Visual Bridge</span>
+        <span class="st-status st-offline" id="st-visual-txt">OFFLINE</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <button class="btn btn-green btn-sm" style="flex:1" onclick="launchAll()">▶ LAUNCH ALL</button>
+      <button class="btn btn-danger btn-sm" style="flex:1" onclick="confirmAction('SHUTDOWN ALL','This will close all simulator stations.',shutdownAll)">■ SHUTDOWN</button>
+    </div>
+  </div>
+
+  <!-- STUDENT GROUPS -->
+  <div class="panel-hdr" style="margin-top:4px;"><span class="dot"></span>Student Groups</div>
+  <div class="card">
+    <div class="form-row">
+      <div>
+        <label>GROUP</label>
+        <select id="groupSel">
+          <option>Group 1 — Watch Officer</option>
+          <option>Group 2 — OOW Advanced</option>
+          <option>Group 3 — Master Level</option>
+          <option>Group 4 — Ratings</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      <div>
+        <label>TRAINEE NAME</label>
+        <input type="text" id="traineeName" placeholder="Enter name">
+      </div>
+    </div>
+    <button class="btn btn-accent btn-sm btn-full" onclick="addTrainee()">+ Add Trainee</button>
+    <div id="traineeList" style="margin-top:8px;max-height:140px;overflow-y:auto;"></div>
+  </div>
+
+  <!-- INSTRUCTOR TOOLS -->
+  <div class="panel-hdr" style="margin-top:4px;"><span class="dot"></span>Instructor Tools</div>
+  <div class="card">
+    <div class="card-title">Quick Inject</div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <button class="btn btn-warn btn-sm btn-full" onclick="inject('fog')">🌫 INJECT FOG (200m vis)</button>
+      <button class="btn btn-warn btn-sm btn-full" onclick="inject('storm')">⛈ INJECT STORM (Bft 9)</button>
+      <button class="btn btn-danger btn-sm btn-full" onclick="inject('me_fail')">⚙ MAIN ENGINE FAIL</button>
+      <button class="btn btn-danger btn-sm btn-full" onclick="inject('steer_fail')">🛞 STEERING GEAR FAIL</button>
+      <button class="btn btn-danger btn-sm btn-full" onclick="inject('mob')">👤 MAN OVERBOARD</button>
+      <button class="btn btn-danger btn-sm btn-full" onclick="inject('blackout')">💡 POWER BLACKOUT</button>
+      <button class="btn btn-accent btn-sm btn-full" onclick="inject('clear')">✓ CLEAR ALL INJECTIONS</button>
+    </div>
+  </div>
+
+  <!-- ANNOTATIONS -->
+  <div class="card">
+    <div class="card-title">Instructor Notes</div>
+    <textarea id="instrNotes" style="width:100%;height:80px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-md);font-family:var(--mono);font-size:11px;padding:6px;border-radius:3px;resize:vertical;outline:none;" placeholder="Type notes here..."></textarea>
+    <button class="btn btn-sm btn-accent btn-full" style="margin-top:4px;" onclick="saveNote()">💾 SAVE NOTE TO LOG</button>
+  </div>
+
+  <!-- EVENT LOG -->
+  <div class="panel-hdr" style="margin-top:4px;"><span class="dot"></span>Event Log</div>
+  <div id="eventLog" style="max-height:220px;overflow-y:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:3px;"></div>
+  <div style="display:flex;gap:6px;margin-top:4px;">
+    <button class="btn btn-sm btn-gray" style="flex:1" onclick="clearLog()">Clear</button>
+    <button class="btn btn-sm btn-accent" style="flex:1" onclick="exportLog()">Export CSV</button>
+  </div>
+
+</div><!-- end right -->
+
+</div><!-- end main -->
+
+<!-- CONFIRM OVERLAY -->
+<div id="confirmOverlay">
+  <div id="confirmBox">
+    <div id="confirmTitle">CONFIRM ACTION</div>
+    <div id="confirmMsg"></div>
+    <div class="confirm-btns">
+      <button class="btn btn-danger" id="confirmYes" onclick="executeConfirm()">CONFIRM</button>
+      <button class="btn btn-gray" onclick="closeConfirm()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// BROADCAST CHANNEL
+// ══════════════════════════════════════════
+const bc = new BroadcastChannel('btm_sim');
+
+bc.onmessage = (e) => {
+  const { type, data } = e.data;
+  if(type === 'STATE_UPDATE') {
+    setLed('led-masterA', 'green');
+    logEvent('State update received from Master Station A', 'info');
+  }
+  if(type === 'STATION_PING') {
+    markStationOnline(data.station);
+  }
+  if(type === 'EMERGENCY_STOP') { triggerEmergencyFreeze(); }
+  if(type === 'MOB') { logEvent(`⚠ MOB POSITION MARKED: ${data.lat} ${data.lon}`, 'danger'); inject('mob_notify'); }
+  if(type === 'FAILURES') {
+    data.failures.forEach(f => logEvent(`⚡ Failure injected: ${f.toUpperCase()}`, 'danger'));
+  }
+};
+
+function broadcastCmd(type, data={}) {
+  bc.postMessage({ type, data });
+}
+
+// Ping other stations periodically
+setInterval(() => {
+  broadcastCmd('COMMANDER_PING', { status: simState });
+}, 3000);
+
+// ══════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s} UTC`;
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ══════════════════════════════════════════
+// SIM TIMER
+// ══════════════════════════════════════════
+let simState = 'READY'; // READY | RUNNING | PAUSED | STOPPED
+let simSeconds = 0;
+let simInterval = null;
+let simSpeed = 1;
+const speedSteps = [0.25, 0.5, 1, 2, 4, 8];
+let speedIdx = 2; // index into speedSteps (default ×1)
+
+function updateSimDisplay() {
+  const h = Math.floor(simSeconds / 3600);
+  const m = Math.floor((simSeconds % 3600) / 60);
+  const s = simSeconds % 60;
+  document.getElementById('simTimeDisplay').textContent =
+    `${String(h).padStart(2,'0')} : ${String(m).padStart(2,'0')} : ${String(s).padStart(2,'0')}`;
+}
+
+function simStart() {
+  if(simState === 'RUNNING') return;
+  simState = 'RUNNING';
+  simSeconds = 0;
+  updateSimDisplay();
+  clearInterval(simInterval);
+  simInterval = setInterval(() => {
+    simSeconds++;
+    updateSimDisplay();
+    if(isRecording) recSeconds++;
+    updateRecDisplay();
+    broadcastCmd('SIM_TICK', { simSeconds, simSpeed });
+    updateAssessmentLive();
+  }, 1000 / speedSteps[speedIdx]);
+  setStatus('RUNNING', 'badge-run', '● RUNNING');
+  setBtns(true);
+  logEvent('Simulation STARTED', 'ok');
+  broadcastCmd('SIM_START', { speed: speedSteps[speedIdx] });
+}
+
+function simPause() {
+  if(simState !== 'RUNNING') return;
+  simState = 'PAUSED';
+  clearInterval(simInterval);
+  setStatus('PAUSED', 'badge-paused', '⏸ PAUSED');
+  document.getElementById('btnPause').disabled = true;
+  document.getElementById('btnResume').disabled = false;
+  logEvent('Simulation PAUSED', 'warn');
+  broadcastCmd('SIM_PAUSE');
+}
+
+function simResume() {
+  if(simState !== 'PAUSED') return;
+  simState = 'RUNNING';
+  simInterval = setInterval(() => {
+    simSeconds++;
+    updateSimDisplay();
+    if(isRecording) recSeconds++;
+    updateRecDisplay();
+    broadcastCmd('SIM_TICK', { simSeconds, simSpeed });
+    updateAssessmentLive();
+  }, 1000 / speedSteps[speedIdx]);
+  setStatus('RUNNING', 'badge-run', '● RUNNING');
+  document.getElementById('btnPause').disabled = false;
+  document.getElementById('btnResume').disabled = true;
+  logEvent('Simulation RESUMED', 'ok');
+  broadcastCmd('SIM_RESUME');
+}
+
+function simStop() {
+  simState = 'STOPPED';
+  clearInterval(simInterval);
+  setStatus('STOPPED', 'badge-stop', '■ STOPPED');
+  setBtns(false);
+  logEvent('Simulation STOPPED', 'danger');
+  broadcastCmd('SIM_STOP');
+}
+
+function simRestart() {
+  simStop();
+  simSeconds = 0;
+  updateSimDisplay();
+  simState = 'READY';
+  setStatus('READY', 'badge-ready', '● READY');
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('btnPause').disabled = true;
+  document.getElementById('btnResume').disabled = true;
+  logEvent('Simulation RESTARTED — ready', 'info');
+  broadcastCmd('SIM_RESTART');
+}
+
+function triggerEmergencyFreeze() {
+  if(simState === 'RUNNING') simPause();
+  logEvent('⚡ EMERGENCY FREEZE — all stations frozen', 'danger');
+  broadcastCmd('FREEZE');
+}
+
+function setStatus(state, cls, label) {
+  const badge = document.getElementById('simStatusBadge');
+  badge.className = 'badge-' + cls.replace('badge-','');
+  badge.textContent = label;
+  document.getElementById('simSpeedDisplay').textContent =
+    state === 'RUNNING' ? `SPEED × ${speedSteps[speedIdx]}` : 'SPEED × —';
+}
+
+function setBtns(running) {
+  document.getElementById('btnStart').disabled = running;
+  document.getElementById('btnStop').disabled = !running;
+  document.getElementById('btnPause').disabled = !running;
+  document.getElementById('btnResume').disabled = true;
+}
+
+// ══════════════════════════════════════════
+// SPEED CONTROL
+// ══════════════════════════════════════════
+function changeSpeed(dir) {
+  speedIdx = Math.max(0, Math.min(speedSteps.length-1, speedIdx + dir));
+  applySpeed();
+}
+
+function clickSpeedTrack(e) {
+  const track = document.getElementById('speedTrack');
+  const rect = track.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  speedIdx = Math.round(pct * (speedSteps.length - 1));
+  applySpeed();
+}
+
+function applySpeed() {
+  const pct = (speedIdx / (speedSteps.length-1)) * 100;
+  document.getElementById('speedFill').style.width = pct + '%';
+  document.getElementById('speedThumb').style.left = pct + '%';
+  document.getElementById('speedLabel').textContent = '×' + speedSteps[speedIdx];
+  document.getElementById('simSpeedDisplay').textContent = `SPEED × ${speedSteps[speedIdx]}`;
+  if(simState === 'RUNNING') {
+    clearInterval(simInterval);
+    simInterval = setInterval(() => {
+      simSeconds++;
+      updateSimDisplay();
+      if(isRecording) recSeconds++;
+      updateRecDisplay();
+      broadcastCmd('SIM_TICK', { simSeconds, simSpeed:speedSteps[speedIdx] });
+    }, 1000 / speedSteps[speedIdx]);
+  }
+  logEvent(`Simulation speed set to ×${speedSteps[speedIdx]}`, 'info');
+  broadcastCmd('SPEED_CHANGE', { speed: speedSteps[speedIdx] });
+}
+
+// ══════════════════════════════════════════
+// RECORDING
+// ══════════════════════════════════════════
+let isRecording = false;
+let recSeconds = 0;
+let recordings = [];
+let recData = [];
+
+function toggleRecord() {
+  isRecording = !isRecording;
+  const btn = document.getElementById('btnRecord');
+  const dot = document.getElementById('recDot');
+  if(isRecording) {
+    recSeconds = 0; recData = [];
+    btn.textContent = '⏹ STOP RECORDING';
+    btn.className = 'btn btn-gray btn-sm';
+    dot.classList.add('active');
+    document.getElementById('btnSaveRec').disabled = true;
+    logEvent('Recording STARTED', 'danger');
+  } else {
+    btn.textContent = '⏺ START RECORDING';
+    btn.className = 'btn btn-danger btn-sm';
+    dot.classList.remove('active');
+    document.getElementById('btnSaveRec').disabled = false;
+    logEvent(`Recording STOPPED (${formatTime(recSeconds)})`, 'warn');
+  }
+}
+
+function updateRecDisplay() {
+  if(!isRecording) return;
+  document.getElementById('recTime').textContent = formatTime(recSeconds);
+  document.getElementById('recSize').textContent = (recSeconds * 0.8).toFixed(0) + ' KB';
+}
+
+function saveRecording() {
+  const name = document.getElementById('recName').value || 'Recording';
+  const rec = { name, duration: recSeconds, date: new Date().toISOString() };
+  recordings.push(rec);
+  const sel = document.getElementById('replaySelect');
+  const opt = document.createElement('option');
+  opt.value = recordings.length - 1;
+  opt.textContent = `${name} (${formatTime(rec.duration)})`;
+  sel.appendChild(opt);
+  logEvent(`Recording saved: "${name}" (${formatTime(rec.duration)})`, 'ok');
+}
+
+// ══════════════════════════════════════════
+// REPLAY
+// ══════════════════════════════════════════
+let replayPlaying = false;
+let replayInterval = null;
+let replayCurrent = 0;
+let replayTotal = 0;
+
+function toggleReplayPlay() {
+  replayPlaying = !replayPlaying;
+  const btn = document.getElementById('btnReplayPlay');
+  if(replayPlaying) {
+    const idx = document.getElementById('replaySelect').value;
+    if(idx === '') { replayPlaying = false; return; }
+    replayTotal = recordings[idx]?.duration || 0;
+    btn.textContent = '⏸ PAUSE';
+    replayInterval = setInterval(() => {
+      replayCurrent++;
+      const pct = replayTotal ? (replayCurrent / replayTotal) * 100 : 0;
+      document.getElementById('scrubber').value = pct;
+      document.getElementById('replayTime').textContent =
+        `${formatTime(replayCurrent)} / ${formatTime(replayTotal)}`;
+      if(replayCurrent >= replayTotal) { toggleReplayPlay(); replayCurrent=0; }
+    }, 1000);
+  } else {
+    clearInterval(replayInterval);
+    btn.textContent = '▶ PLAY';
+  }
+}
+
+function scrubReplay(val) {
+  replayCurrent = Math.floor((val/100) * replayTotal);
+  document.getElementById('replayTime').textContent =
+    `${formatTime(replayCurrent)} / ${formatTime(replayTotal)}`;
+  broadcastCmd('REPLAY_SEEK', { position: replayCurrent });
+}
+
+function replayRewind() { document.getElementById('scrubber').value=0; scrubReplay(0); }
+function replayEnd()    { document.getElementById('scrubber').value=100; scrubReplay(100); }
+
+// ══════════════════════════════════════════
+// SCENARIOS
+// ══════════════════════════════════════════
+const scenarios = [
+  { id:1, name:'Bosphorus Northbound Approach',    area:'Bosphorus Strait', diff:'medium', duration:45, desc:'Navigate the strait northbound with heavy traffic, current 2.5kts.' },
+  { id:2, name:'Bosphorus — Restricted Visibility', area:'Bosphorus Strait', diff:'hard',   duration:60, desc:'Fog 200m vis, engine failure at Bebek bend.' },
+  { id:3, name:'Dover Strait TSS Transit',          area:'Dover Strait',     diff:'medium', duration:50, desc:'Cross-channel traffic, separation scheme compliance.' },
+  { id:4, name:'Dover Strait — Gale Conditions',   area:'Dover Strait',     diff:'hard',   duration:60, desc:'Bft 9, heavy sea state, collision avoidance.' },
+  { id:5, name:'Singapore Strait Westbound',        area:'Singapore Strait', diff:'hard',   duration:75, desc:'High traffic density, TSS, AIS targets ×20.' },
+  { id:6, name:'Malacca Strait — Piracy Scenario', area:'Malacca Strait',   diff:'hard',   duration:90, desc:'Low visibility, fast craft encounter, BMP procedures.' },
+  { id:7, name:'Rotterdam Pilot Boarding',          area:'Rotterdam Approach', diff:'easy', duration:30, desc:'Anchoring, pilot boarding, berthing.' },
+  { id:8, name:'Open Ocean — COLREGS Encounter',   area:'Open Ocean',       diff:'easy',   duration:25, desc:'Head-on, crossing, overtaking — 3 targets.' },
+  { id:9, name:'Tokyo Bay Approach',               area:'Tokyo Bay',        diff:'medium', duration:55, desc:'VTS reporting, dense traffic, anchorage area.' },
+  { id:10,'name':'Suez Canal Transit',              area:'Suez Canal',       diff:'medium', duration:120,desc:'Convoy transit, single-lane navigation, limited room.' },
+  { id:11, name:'Panama Canal — Locks Transit',    area:'Panama Canal',     diff:'hard',   duration:90, desc:'Lock approach, tug handling, line operations.' },
+  { id:12, name:'Gibraltar Strait Eastbound',      area:'Gibraltar Strait', diff:'easy',   duration:35, desc:'Current 3.5kts east, traffic separation scheme.' },
+  { id:13, name:'MOB Recovery Exercise',            area:'Open Ocean',       diff:'medium', duration:40, desc:'Man overboard — Williamson turn, recovery.' },
+  { id:14, name:'Anchoring — Emergency',            area:'Bosphorus Strait', diff:'hard',   duration:45, desc:'Engine failure, emergency anchoring, communication.' },
+  { id:15, name:'Fire & Abandon Ship',              area:'Open Ocean',       diff:'hard',   duration:60, desc:'Engine room fire, abandon ship procedures.' },
+];
+
+let selectedScenario = null;
+let filteredScenarios = [...scenarios];
+
+function renderScenarios(list) {
+  const cont = document.getElementById('scenarioList');
+  cont.innerHTML = '';
+  list.forEach(sc => {
+    const d = document.createElement('div');
+    d.className = 'scenario-item' + (selectedScenario?.id === sc.id ? ' active':'');
+    d.innerHTML = `
+      <span class="sc-num">${String(sc.id).padStart(2,'0')}</span>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span class="sc-name">${sc.name}</span>
+          <span class="sc-diff ${sc.diff}">${sc.diff.toUpperCase()}</span>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <span class="sc-area">${sc.area}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-lo);">${sc.duration} min</span>
+        </div>
+      </div>
+    `;
+    d.onclick = () => {
+      selectedScenario = sc;
+      renderScenarios(filteredScenarios);
+      document.getElementById('loadedScenarioInfo').innerHTML =
+        `<b style="color:var(--accent)">${sc.name}</b><br>
+         Area: <span style="color:var(--text-hi)">${sc.area}</span><br>
+         Duration: <span style="color:var(--accent2)">${sc.duration} min</span><br>
+         Difficulty: <span class="sc-diff ${sc.diff}">${sc.diff}</span><br>
+         <span style="color:var(--text-lo);margin-top:4px;display:block">${sc.desc}</span>`;
+    };
+    cont.appendChild(d);
+  });
+}
+
+function filterScenarios() {
+  const q = document.getElementById('scenarioSearch').value.toLowerCase();
+  const area = document.getElementById('areaFilter').value;
+  const diff = document.getElementById('diffFilter').value.toLowerCase();
+  filteredScenarios = scenarios.filter(sc =>
+    (!q || sc.name.toLowerCase().includes(q) || sc.area.toLowerCase().includes(q)) &&
+    (!area || sc.area === area) &&
+    (!diff || sc.diff === diff)
+  );
+  renderScenarios(filteredScenarios);
+}
+
+function loadSelectedScenario() {
+  if(!selectedScenario) { logEvent('No scenario selected','warn'); return; }
+  broadcastCmd('LOAD_SCENARIO', { scenario: selectedScenario });
+  logEvent(`Scenario loaded: "${selectedScenario.name}"`, 'ok');
+  document.getElementById('recName').value = `Ex_${String(selectedScenario.id).padStart(2,'0')}_${selectedScenario.area.replace(/\s/g,'_')}`;
+}
+
+function showNewScenarioForm() {
+  logEvent('Custom scenario creation: edit fields in Master Station A','info');
+}
+
+// ══════════════════════════════════════════
+// TRAINEES
+// ══════════════════════════════════════════
+let trainees = [];
+
+function addTrainee() {
+  const name = document.getElementById('traineeName').value.trim();
+  if(!name) return;
+  const group = document.getElementById('groupSel').value;
+  trainees.push({ name, group, added: new Date().toISOString() });
+  document.getElementById('traineeName').value = '';
+  renderTrainees();
+  logEvent(`Trainee added: ${name} (${group})`, 'info');
+}
+
+function renderTrainees() {
+  const list = document.getElementById('traineeList');
+  list.innerHTML = '';
+  trainees.forEach((t,i) => {
+    const d = document.createElement('div');
+    d.className = 'station-item';
+    d.innerHTML = `
+      <span class="led green"></span>
+      <div style="flex:1;">
+        <div class="st-name">${t.name}</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text-lo);">${t.group}</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removeTrainee(${i})" style="padding:2px 6px;">✕</button>
+    `;
+    list.appendChild(d);
+  });
+}
+
+function removeTrainee(i) {
+  logEvent(`Trainee removed: ${trainees[i].name}`, 'warn');
+  trainees.splice(i,1);
+  renderTrainees();
+}
+
+// ══════════════════════════════════════════
+// QUICK INJECT
+// ══════════════════════════════════════════
+function inject(type) {
+  const msgs = {
+    fog:       '🌫 INJECTED: Fog — Visibility 200m',
+    storm:     '⛈ INJECTED: Storm — Beaufort 9 (41-47 kts)',
+    me_fail:   '⚙ INJECTED: Main Engine Failure',
+    steer_fail:'🛞 INJECTED: Steering Gear Failure',
+    mob:       '👤 INJECTED: Man Overboard — PORT SIDE',
+    blackout:  '💡 INJECTED: Power Blackout',
+    mob_notify:'👤 MOB notification from Master A',
+    clear:     '✓ All injections cleared',
+  };
+  const lvl = ['me_fail','steer_fail','mob','blackout','steer_fail'].includes(type) ? 'danger' :
+              ['fog','storm'].includes(type) ? 'warn' : 'ok';
+  logEvent(msgs[type] || 'Injection: '+type, lvl);
+  broadcastCmd('INJECT', { inject: type });
+}
+
+// ══════════════════════════════════════════
+// ASSESSMENT
+// ══════════════════════════════════════════
+function updateAssessmentLive() {
+  if(simState !== 'RUNNING' || simSeconds < 30) return;
+  // Simulated scores that evolve over time
+  const t = simSeconds;
+  const scores = [
+    Math.min(100, 60 + Math.sin(t/60)*20 + Math.random()*5),
+    Math.min(100, 70 + Math.cos(t/90)*15 + Math.random()*5),
+    Math.min(100, 65 + Math.sin(t/45)*18 + Math.random()*5),
+    Math.min(100, 72 + Math.cos(t/75)*12 + Math.random()*5),
+    Math.min(100, 55 + Math.sin(t/120)*25 + Math.random()*8),
+  ];
+  scores.forEach((s,i) => {
+    const v = Math.round(s);
+    document.getElementById(`af${i+1}`).style.width = v+'%';
+    const color = v>=80?'var(--accent2)':v>=60?'var(--warn)':'var(--danger)';
+    document.getElementById(`af${i+1}`).style.background = color;
+    document.getElementById(`as${i+1}`).textContent = v+'%';
+    document.getElementById(`as${i+1}`).style.color = color;
+  });
+  const total = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+  document.getElementById('as-total').textContent = total+'%';
+  document.getElementById('as-total').style.color = total>=80?'var(--accent2)':total>=60?'var(--warn)':'var(--danger)';
+}
+
+function calcAssessment() {
+  updateAssessmentLive();
+  logEvent('Assessment scores calculated', 'info');
+}
+
+// ══════════════════════════════════════════
+// STATION MONITORING
+// ══════════════════════════════════════════
+function markStationOnline(station) {
+  const map = { 'radar':'radar','conning':'conning','ecdis':'ecdis','visual':'visual' };
+  const key = map[station];
+  if(!key) return;
+  const led = document.getElementById(`st-${key}-led`);
+  const txt = document.getElementById(`st-${key}-txt`);
+  if(led) { led.className='led green pulse'; }
+  if(txt) { txt.textContent='ONLINE'; txt.className='st-status st-online'; }
+  setLed('led-'+key,'green');
+}
+
+function setLed(id, color) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(color==='green') { el.className='led green'; el.style.background=el.style.color=''; }
+  else if(color==='amber') { el.className='led amber'; }
+  else { el.className='led off'; }
+}
+
+// ══════════════════════════════════════════
+// LAUNCH / SHUTDOWN
+// ══════════════════════════════════════════
+function launchAll() {
+  logEvent('LAUNCH ALL command sent to all stations', 'ok');
+  broadcastCmd('LAUNCH_ALL');
+  // Simulate stations coming online
+  const stations = ['radar','conning','ecdis','visual'];
+  stations.forEach((s,i) => {
+    setTimeout(() => {
+      markStationOnline(s);
+      logEvent(`Station ONLINE: ${s.toUpperCase()}`, 'ok');
+    }, (i+1)*1200);
+  });
+}
+
+function shutdownAll() {
+  simStop();
+  broadcastCmd('SHUTDOWN_ALL');
+  ['radar','conning','ecdis','visual'].forEach(s => {
+    const led = document.getElementById(`st-${s}-led`);
+    const txt = document.getElementById(`st-${s}-txt`);
+    if(led) led.className='led off';
+    if(txt) { txt.textContent='OFFLINE'; txt.className='st-status st-offline'; }
+  });
+  logEvent('All stations SHUTDOWN', 'danger');
+}
+
+// ══════════════════════════════════════════
+// EVENT LOG
+// ══════════════════════════════════════════
+function logEvent(msg, type='info') {
+  const log = document.getElementById('eventLog');
+  const now = new Date();
+  const ts = now.getUTCHours().toString().padStart(2,'0')+':'+now.getUTCMinutes().toString().padStart(2,'0')+':'+now.getUTCSeconds().toString().padStart(2,'0');
+  const div = document.createElement('div');
+  div.className = 'evt-item';
+  div.innerHTML = `<span class="evt-time">${ts}</span><span class="evt-msg ${type}">${msg}</span>`;
+  log.insertBefore(div, log.firstChild);
+  if(log.children.length > 200) log.removeChild(log.lastChild);
+}
+
+function clearLog() {
+  document.getElementById('eventLog').innerHTML = '';
+  logEvent('Event log cleared', 'info');
+}
+
+function exportLog() {
+  const items = document.querySelectorAll('#eventLog .evt-item');
+  let csv = 'Time,Message\n';
+  items.forEach(it => {
+    const t = it.querySelector('.evt-time').textContent;
+    const m = it.querySelector('.evt-msg').textContent;
+    csv += `"${t}","${m}"\n`;
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = 'BTM_EventLog.csv';
+  a.click();
+}
+
+function saveNote() {
+  const note = document.getElementById('instrNotes').value.trim();
+  if(note) {
+    logEvent(`📝 INSTRUCTOR NOTE: ${note}`, 'warn');
+    document.getElementById('instrNotes').value = '';
+  }
+}
+
+// ══════════════════════════════════════════
+// DEBRIEF
+// ══════════════════════════════════════════
+function exportDebrief() {
+  const sc = selectedScenario;
+  const traineeNames = trainees.map(t=>t.name).join(', ') || 'Not assigned';
+  const scores = [1,2,3,4,5].map(i => {
+    const el = document.getElementById(`as${i}`);
+    return el ? el.textContent : '—';
+  });
+  const cats = ['Collision Avoidance','Route Following','Engine Handling','Bridge Watchkeeping','Emergency Response'];
+  let html = `<html><head><title>BTM Debrief Report</title>
+  <style>body{font-family:Arial,sans-serif;margin:40px;color:#222;} h1{color:#003366;} table{border-collapse:collapse;width:100%;} td,th{border:1px solid #ccc;padding:8px;} th{background:#003366;color:#fff;} .score{font-size:18px;font-weight:bold;}</style>
+  </head><body>
+  <h1>BTM Bridge Simulator — Debrief Report</h1>
+  <p><b>Date:</b> ${new Date().toUTCString()}</p>
+  <p><b>Scenario:</b> ${sc?.name || 'N/A'}</p>
+  <p><b>Area:</b> ${sc?.area || 'N/A'}</p>
+  <p><b>Trainees:</b> ${traineeNames}</p>
+  <p><b>Duration:</b> ${formatTime(simSeconds)}</p>
+  <h2>Assessment Scores</h2>
+  <table><tr><th>Category</th><th>Score</th></tr>
+  ${cats.map((c,i)=>`<tr><td>${c}</td><td class="score">${scores[i]}</td></tr>`).join('')}
+  <tr style="background:#f0f0f0"><td><b>OVERALL</b></td><td class="score">${document.getElementById('as-total').textContent}</td></tr>
+  </table>
+  <h2>Event Log</h2>
+  <table><tr><th>Time</th><th>Event</th></tr>
+  ${Array.from(document.querySelectorAll('#eventLog .evt-item')).slice(0,50).map(e=>`<tr><td>${e.querySelector('.evt-time').textContent}</td><td>${e.querySelector('.evt-msg').textContent}</td></tr>`).join('')}
+  </table><div style="position:fixed;bottom:8px;left:12px;z-index:9999;pointer-events:none;"><span style="font-family:Georgia,serif;font-size:15px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5);">CASY SIMULATIONS</span></div>
+</body></html>`;
+  const a = document.createElement('a');
+  a.href = 'data:text/html,' + encodeURIComponent(html);
+  a.download = 'BTM_Debrief_Report.html';
+  a.click();
+  logEvent('Debrief report exported', 'ok');
+}
+
+function printDebrief() {
+  logEvent('Print dialog opened', 'info');
+  window.print();
+}
+
+// ══════════════════════════════════════════
+// CONFIRM OVERLAY
+// ══════════════════════════════════════════
+let confirmCallback = null;
+
+function confirmAction(title, msg, callback) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = callback;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+
+function executeConfirm() {
+  closeConfirm();
+  if(confirmCallback) confirmCallback();
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('show');
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function formatTime(sec) {
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = sec%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(function init() {
+  renderScenarios(scenarios);
+  logEvent('BTM Simulator — Master Station B (Commander) online', 'ok');
+  logEvent('Waiting for scenario selection...', 'info');
+  logEvent('Master Station A: connected', 'ok');
+  // Add some default trainees
+  trainees = [
+    { name:'Capt. Ahmed Raza', group:'Group 1 — Watch Officer' },
+    { name:'3/O Priya Nair', group:'Group 1 — Watch Officer' },
+  ];
+  renderTrainees();
+  // Init speed display
+  applySpeed();
+  broadcastCmd('COMMANDER_ONLINE');
+})();
+</script>
+<div style="position:fixed;bottom:8px;left:12px;z-index:9999;pointer-events:none;"><span style="font-family:Georgia,serif;font-size:15px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5);">CASY SIMULATIONS</span></div>
+</body>
+</html>

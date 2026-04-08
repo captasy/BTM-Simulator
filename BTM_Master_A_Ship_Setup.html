@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTM Bridge Simulator — Master Station A | Ship & Scenario Setup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg-deep:    #060b10;
+    --bg-panel:   #0a1520;
+    --bg-card:    #0d1e2e;
+    --bg-input:   #071018;
+    --border:     #1a3a55;
+    --border-hi:  #0d6efd;
+    --accent:     #00d4ff;
+    --accent2:    #00ff9d;
+    --accent3:    #ff6b35;
+    --warn:       #ffd700;
+    --danger:     #ff3b3b;
+    --text-hi:    #e8f4ff;
+    --text-md:    #7ab3d4;
+    --text-lo:    #3a6a8a;
+    --green-led:  #00ff88;
+    --red-led:    #ff2244;
+    --amber-led:  #ffaa00;
+    --mono:       'Share Tech Mono', monospace;
+    --head:       'Rajdhani', sans-serif;
+    --body:       'Exo 2', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-hi);
+    font-family: var(--body);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+    pointer-events:none; z-index:9999;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    background: linear-gradient(90deg, #060e18 0%, #091929 50%, #060e18 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 16px;
+    display: flex; align-items:center; justify-content:space-between;
+    position: sticky; top:0; z-index: 100;
+  }
+  .tb-logo { font-family:var(--head); font-size:18px; font-weight:700; letter-spacing:3px; color:var(--accent); }
+  .tb-logo span { color:var(--accent2); }
+  .tb-title { font-family:var(--head); font-size:14px; font-weight:600; letter-spacing:2px; color:var(--text-md); text-transform:uppercase; }
+  .tb-clock { font-family:var(--mono); font-size:15px; color:var(--accent); min-width:120px; text-align:right; }
+
+  .status-row { display:flex; gap:16px; align-items:center; }
+  .led { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; box-shadow:0 0 6px currentColor; }
+  .led.green { background:var(--green-led); color:var(--green-led); }
+  .led.red   { background:var(--red-led);   color:var(--red-led); }
+  .led.amber { background:var(--amber-led); color:var(--amber-led); }
+  .led-label { font-family:var(--mono); font-size:11px; color:var(--text-md); }
+
+  /* ── MAIN LAYOUT ── */
+  #main { display:grid; grid-template-columns:270px 1fr 260px; gap:0; height:calc(100vh - 44px); }
+
+  /* ── PANEL SHARED ── */
+  .panel { background:var(--bg-panel); border-right:1px solid var(--border); overflow-y:auto; padding:10px; }
+  .panel:last-child { border-right:none; border-left:1px solid var(--border); }
+
+  .panel-hdr {
+    font-family:var(--head); font-size:13px; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:var(--accent); border-bottom:1px solid var(--border);
+    padding:6px 4px 6px; margin-bottom:8px; display:flex; align-items:center; gap:8px;
+  }
+  .panel-hdr .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); }
+
+  /* ── CARDS ── */
+  .card {
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:10px;
+    margin-bottom:8px;
+  }
+  .card-title {
+    font-family:var(--head); font-size:11px; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:var(--text-md); margin-bottom:8px; display:flex; align-items:center; gap:6px;
+  }
+  .card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── FORM ELEMENTS ── */
+  label { font-family:var(--mono); font-size:10px; color:var(--text-lo); display:block; margin-bottom:3px; letter-spacing:1px; }
+
+  select, input[type=text], input[type=number] {
+    width:100%; background:var(--bg-input); border:1px solid var(--border);
+    color:var(--text-hi); font-family:var(--mono); font-size:12px;
+    padding:5px 8px; border-radius:3px; outline:none;
+    transition: border-color .2s, box-shadow .2s;
+    appearance:none;
+  }
+  select:focus, input:focus {
+    border-color:var(--accent); box-shadow:0 0 0 2px rgba(0,212,255,0.15);
+  }
+  select option { background:var(--bg-deep); }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px; }
+  .form-row.three { grid-template-columns:1fr 1fr 1fr; }
+  .form-row.full { grid-template-columns:1fr; }
+  .form-group { margin-bottom:6px; }
+
+  /* Slider */
+  input[type=range] {
+    width:100%; accent-color:var(--accent); height:4px; cursor:pointer;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--border) 0%);
+  }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-val { font-family:var(--mono); font-size:12px; color:var(--accent2); min-width:48px; text-align:right; }
+
+  /* Buttons */
+  .btn {
+    font-family:var(--head); font-size:12px; font-weight:600; letter-spacing:1.5px;
+    text-transform:uppercase; padding:7px 14px; border-radius:3px; border:1px solid;
+    cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-accent { background:rgba(0,212,255,0.1); border-color:var(--accent); color:var(--accent); }
+  .btn-accent:hover { background:rgba(0,212,255,0.25); box-shadow:0 0 12px rgba(0,212,255,0.3); }
+  .btn-green { background:rgba(0,255,157,0.1); border-color:var(--accent2); color:var(--accent2); }
+  .btn-green:hover { background:rgba(0,255,157,0.25); box-shadow:0 0 12px rgba(0,255,157,0.3); }
+  .btn-danger { background:rgba(255,59,59,0.1); border-color:var(--danger); color:var(--danger); }
+  .btn-danger:hover { background:rgba(255,59,59,0.25); }
+  .btn-warn { background:rgba(255,215,0,0.1); border-color:var(--warn); color:var(--warn); }
+  .btn-warn:hover { background:rgba(255,215,0,0.25); }
+  .btn-sm { padding:4px 10px; font-size:11px; }
+  .btn-full { width:100%; justify-content:center; }
+
+  /* Toggle switch */
+  .toggle-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+  .toggle-label { font-family:var(--mono); font-size:11px; color:var(--text-md); }
+  .toggle { position:relative; width:40px; height:20px; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider {
+    position:absolute; inset:0; background:var(--bg-input); border:1px solid var(--border);
+    border-radius:10px; cursor:pointer; transition:.3s;
+  }
+  .toggle-slider::before {
+    content:''; position:absolute; width:14px; height:14px; left:2px; bottom:2px;
+    background:var(--text-lo); border-radius:50%; transition:.3s;
+  }
+  .toggle input:checked + .toggle-slider { background:rgba(0,212,255,0.2); border-color:var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--accent); box-shadow:0 0 6px var(--accent); }
+
+  /* Digital display */
+  .digi {
+    background:var(--bg-input); border:1px solid var(--border); border-radius:3px;
+    font-family:var(--mono); font-size:20px; color:var(--accent2);
+    text-align:center; padding:6px 4px;
+    text-shadow:0 0 10px var(--accent2);
+    letter-spacing:2px;
+  }
+  .digi-sm { font-size:14px; padding:4px; }
+  .digi-label { font-family:var(--mono); font-size:9px; color:var(--text-lo); text-align:center; margin-top:2px; letter-spacing:1px; }
+
+  /* Target list */
+  .target-item {
+    background:var(--bg-input); border:1px solid var(--border); border-radius:3px;
+    padding:7px 8px; margin-bottom:5px; cursor:pointer; transition:border-color .2s;
+    display:flex; align-items:center; gap:8px;
+  }
+  .target-item:hover { border-color:var(--accent); }
+  .target-item.active { border-color:var(--accent2); background:rgba(0,255,157,0.05); }
+  .target-num { font-family:var(--mono); font-size:11px; color:var(--accent); min-width:24px; }
+  .target-name { font-family:var(--head); font-size:13px; font-weight:600; color:var(--text-hi); flex:1; }
+  .target-type { font-family:var(--mono); font-size:10px; color:var(--text-lo); }
+  .target-status { width:8px; height:8px; border-radius:50%; }
+  .ts-moving { background:var(--accent2); box-shadow:0 0 5px var(--accent2); }
+  .ts-stopped { background:var(--text-lo); }
+  .ts-anchored { background:var(--amber-led); box-shadow:0 0 5px var(--amber-led); }
+
+  /* Tabs */
+  .tabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:8px; gap:2px; }
+  .tab {
+    font-family:var(--head); font-size:11px; font-weight:600; letter-spacing:1px;
+    text-transform:uppercase; padding:6px 12px; cursor:pointer;
+    color:var(--text-lo); border-bottom:2px solid transparent; transition:all .2s;
+  }
+  .tab:hover { color:var(--text-md); }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* Center content area */
+  #center {
+    background: var(--bg-deep);
+    overflow-y:auto;
+    padding:10px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+
+  /* Section header in center */
+  .sec-hdr {
+    font-family:var(--head); font-size:15px; font-weight:700; letter-spacing:3px;
+    text-transform:uppercase; color:var(--accent);
+    border-left:3px solid var(--accent); padding-left:10px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+
+  /* Big data grid */
+  .data-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .data-grid.cols3 { grid-template-columns:repeat(3,1fr); }
+  .data-grid.cols2 { grid-template-columns:repeat(2,1fr); }
+  .data-cell {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:3px;
+    padding:8px 10px; text-align:center;
+  }
+  .dc-label { font-family:var(--mono); font-size:9px; color:var(--text-lo); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; }
+  .dc-val { font-family:var(--mono); font-size:16px; color:var(--accent2); text-shadow:0 0 8px var(--accent2); }
+  .dc-val.warn { color:var(--warn); text-shadow:0 0 8px var(--warn); }
+  .dc-unit { font-family:var(--mono); font-size:9px; color:var(--text-lo); margin-top:2px; }
+
+  /* Route table */
+  table.route-tbl { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+  .route-tbl th { background:rgba(0,212,255,0.08); color:var(--accent); font-size:10px; letter-spacing:1px; padding:5px 8px; border-bottom:1px solid var(--border); text-align:left; }
+  .route-tbl td { padding:5px 8px; border-bottom:1px solid rgba(26,58,85,0.5); color:var(--text-md); }
+  .route-tbl tr:hover td { background:rgba(0,212,255,0.04); color:var(--text-hi); }
+  .route-tbl td.num { color:var(--accent2); }
+  .route-tbl td.act { color:var(--accent); }
+
+  /* Compass rose mini */
+  .compass-wrap { display:flex; justify-content:center; margin-bottom:8px; }
+  #compassCanvas { border-radius:50%; border:1px solid var(--border); }
+
+  /* Wind/current indicator */
+  .wind-display {
+    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+  }
+
+  /* Alert/message box */
+  .msg-box {
+    background:var(--bg-input); border-left:3px solid var(--accent);
+    padding:6px 10px; margin-bottom:4px; border-radius:0 3px 3px 0;
+    font-family:var(--mono); font-size:11px; color:var(--text-md);
+  }
+  .msg-box.warn { border-left-color:var(--warn); }
+  .msg-box.danger { border-left-color:var(--danger); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width:5px; }
+  ::-webkit-scrollbar-track { background:var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--text-lo); }
+
+  /* Blink animation */
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .blink { animation:blink 1.2s infinite; }
+  @keyframes pulse-glow { 0%,100%{box-shadow:0 0 6px var(--accent2)} 50%{box-shadow:0 0 18px var(--accent2)} }
+  .pulse { animation:pulse-glow 2s infinite; }
+
+  /* Ship diagram */
+  #shipDiagram { display:flex; justify-content:center; }
+  #shipDiagram svg { filter:drop-shadow(0 0 8px rgba(0,212,255,0.2)); }
+
+  /* Port/Stbd colour coding */
+  .port  { color:#ff4466; }
+  .stbd  { color:#44ff88; }
+
+  /* Engine telegraph graphic */
+  .telegraph {
+    background:var(--bg-input); border:1px solid var(--border); border-radius:4px;
+    padding:8px; text-align:center;
+  }
+  .tele-positions { display:flex; flex-direction:column; gap:2px; }
+  .tele-pos {
+    font-family:var(--mono); font-size:10px; padding:3px 6px; border-radius:2px;
+    cursor:pointer; transition:all .15s; letter-spacing:1px;
+  }
+  .tele-pos.ahead { color:#00ff9d; border:1px solid rgba(0,255,157,0.3); }
+  .tele-pos.stop { color:var(--warn); border:1px solid rgba(255,215,0,0.3); }
+  .tele-pos.astern { color:#ff6b35; border:1px solid rgba(255,107,53,0.3); }
+  .tele-pos.active { background:rgba(0,212,255,0.2); border-color:var(--accent); color:var(--accent); font-weight:700; box-shadow:inset 0 0 8px rgba(0,212,255,0.2); }
+  .tele-pos:hover:not(.active) { background:rgba(255,255,255,0.05); }
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-logo">BTM<span>SIM</span></div>
+  <div class="tb-title">Master Station A — Ship &amp; Scenario Setup</div>
+  <div class="status-row">
+    <span class="led green pulse"></span><span class="led-label">SIM READY</span>
+    <span class="led amber"></span><span class="led-label">SYNC</span>
+    <span class="led green"></span><span class="led-label">NET</span>
+    <div class="tb-clock" id="clock">--:--:-- UTC</div>
+  </div>
+</div>
+
+<div id="main">
+
+<!-- ════════════════════════════════════════════
+     LEFT PANEL — OWN SHIP SETUP
+════════════════════════════════════════════ -->
+<div class="panel" id="leftPanel">
+
+  <div class="panel-hdr"><span class="dot"></span>Own Ship</div>
+
+  <!-- Ship Selection -->
+  <div class="card">
+    <div class="card-title">Vessel Type</div>
+    <div class="form-group">
+      <label>SELECT VESSEL</label>
+      <select id="ownShipType" onchange="updateShipType()">
+        <option value="container">Container Ship (302m)</option>
+        <option value="tanker_vlcc">VLCC Tanker (330m)</option>
+        <option value="tanker_aframax">Aframax Tanker (248m)</option>
+        <option value="bulk">Bulk Carrier (225m)</option>
+        <option value="lng">LNG Carrier (295m)</option>
+        <option value="pcc">Car Carrier (PCC) (190m)</option>
+        <option value="cruise">Cruise Vessel (310m)</option>
+        <option value="ferry">RoPax Ferry (180m)</option>
+        <option value="obo">OBO Carrier (260m)</option>
+        <option value="supply">Offshore Supply (80m)</option>
+        <option value="tug">Harbour Tug (32m)</option>
+        <option value="naval">Naval Frigate (140m)</option>
+        <option value="yacht">Motor Yacht (45m)</option>
+        <option value="custom">Custom Vessel</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>IMO NUMBER</label>
+        <input type="text" id="imoNum" value="9876543">
+      </div>
+      <div class="form-group">
+        <label>CALL SIGN</label>
+        <input type="text" id="callSign" value="9HOW1">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>VESSEL NAME</label>
+      <input type="text" id="vesselName" value="MV BOSPHORUS STAR">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>FLAG STATE</label>
+        <select id="flagState">
+          <option>Turkey</option><option>Panama</option><option>Liberia</option>
+          <option>Marshall Islands</option><option>Greece</option><option>Singapore</option>
+          <option>Bahamas</option><option>Norway</option><option>UK</option>
+          <option>Malta</option><option>Cyprus</option><option>India</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>PORT OF REG.</label>
+        <input type="text" id="portReg" value="Istanbul">
+      </div>
+    </div>
+  </div>
+
+  <!-- Ship Particulars -->
+  <div class="card">
+    <div class="card-title">Ship Particulars</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>LOA (m)</label>
+        <input type="number" id="loa" value="302" min="10" max="450" onchange="broadcastState()">
+      </div>
+      <div class="form-group">
+        <label>BREADTH (m)</label>
+        <input type="number" id="beam" value="48.2" min="5" max="80" step="0.1">
+      </div>
+    </div>
+    <div class="form-row.three form-row">
+      <div class="form-group">
+        <label>DRAFT FWD (m)</label>
+        <input type="number" id="draftFwd" value="14.2" min="1" max="30" step="0.1" onchange="broadcastState()">
+      </div>
+      <div class="form-group">
+        <label>DRAFT AFT (m)</label>
+        <input type="number" id="draftAft" value="14.8" min="1" max="30" step="0.1" onchange="broadcastState()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>DISPLACEMENT (T)</label>
+        <input type="number" id="displ" value="85000" step="100">
+      </div>
+      <div class="form-group">
+        <label>GRT</label>
+        <input type="number" id="grt" value="54000" step="100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>DWT</label>
+        <input type="number" id="dwt" value="100000" step="100">
+      </div>
+      <div class="form-group">
+        <label>FREEBOARD (m)</label>
+        <input type="number" id="freeboard" value="3.6" step="0.1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>BRIDGE HEIGHT (m)</label>
+        <input type="number" id="bridgeHt" value="35" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>MASTHEAD HT (m)</label>
+        <input type="number" id="mastheadHt" value="52" step="0.5">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>ANCHOR CHAIN PORT (shackles)</label>
+      <input type="number" id="chainPort" value="12" min="0" max="20">
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label">Bulbous Bow</span>
+      <label class="toggle"><input type="checkbox" id="bulbousBow" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label">Twin Screw</span>
+      <label class="toggle"><input type="checkbox" id="twinScrew"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label">CPP (Controllable Pitch)</span>
+      <label class="toggle"><input type="checkbox" id="cpp" checked><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <!-- Engine & Propulsion -->
+  <div class="card">
+    <div class="card-title">Engine &amp; Propulsion</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>MAX RPM</label>
+        <input type="number" id="maxRpm" value="105" min="50" max="300">
+      </div>
+      <div class="form-group">
+        <label>MCR POWER (kW)</label>
+        <input type="number" id="mcrPower" value="26500" step="100">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>MAX SERVICE SPEED (kts)</label>
+      <div class="slider-row">
+        <input type="range" id="maxSpeedSld" min="5" max="30" value="22" step="0.5" oninput="updSlider(this,'maxSpeedVal')">
+        <span class="slider-val" id="maxSpeedVal">22.0 kts</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>MANEUVERING SPEED (kts)</label>
+      <div class="slider-row">
+        <input type="range" id="manovSld" min="1" max="15" value="8" step="0.5" oninput="updSlider(this,'manovVal')">
+        <span class="slider-val" id="manovVal">8.0 kts</span>
+      </div>
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label">Bow Thruster</span>
+      <label class="toggle"><input type="checkbox" id="bowThruster" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="form-group" id="bowThrusterPwr">
+      <label>BOW THRUSTER POWER (kW)</label>
+      <input type="number" id="btPower" value="3000" step="100">
+    </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label">Stern Thruster</span>
+      <label class="toggle"><input type="checkbox" id="sternThruster"><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <!-- Cargo / Loading -->
+  <div class="card">
+    <div class="card-title">Cargo &amp; Loading Condition</div>
+    <div class="form-group">
+      <label>LOADING CONDITION</label>
+      <select id="loadCond" onchange="broadcastState()">
+        <option value="laden_full">Laden — Full Load</option>
+        <option value="laden_partial">Laden — Partial (75%)</option>
+        <option value="laden_half">Laden — Half</option>
+        <option value="ballast_normal">Ballast — Normal</option>
+        <option value="ballast_heavy">Ballast — Heavy</option>
+        <option value="light">Light Ship</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>GM (m)</label>
+        <input type="number" id="gm" value="1.8" step="0.1" min="0.5" max="6">
+      </div>
+      <div class="form-group">
+        <label>TRIM (m)</label>
+        <input type="number" id="trim" value="0.6" step="0.1">
+      </div>
+    </div>
+  </div>
+
+</div><!-- end left panel -->
+
+
+<!-- ════════════════════════════════════════════
+     CENTER — MAIN SETUP AREA
+════════════════════════════════════════════ -->
+<div id="center">
+
+  <!-- Current state display -->
+  <div class="sec-hdr">
+    Live Simulation State
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-green btn-sm" onclick="applyAll()">▶ APPLY ALL</button>
+      <button class="btn btn-warn btn-sm" onclick="resetDefaults()">↺ RESET</button>
+      <button class="btn btn-danger btn-sm" onclick="emergencyStop()">■ ESTOP</button>
+    </div>
+  </div>
+
+  <!-- Digital readout grid -->
+  <div class="data-grid">
+    <div class="data-cell">
+      <div class="dc-label">SOG</div>
+      <div class="dc-val" id="dc-sog">00.0</div>
+      <div class="dc-unit">KNOTS</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">COG</div>
+      <div class="dc-val" id="dc-cog">000.0</div>
+      <div class="dc-unit">DEGREES T</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">HDG (GYRO)</div>
+      <div class="dc-val" id="dc-hdg">011.0</div>
+      <div class="dc-unit">DEGREES</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">ROT</div>
+      <div class="dc-val" id="dc-rot">+0.0</div>
+      <div class="dc-unit">DEG/MIN</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">LAT</div>
+      <div class="dc-val" style="font-size:13px;" id="dc-lat">40°58.283N</div>
+      <div class="dc-unit">WGS-84</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">LON</div>
+      <div class="dc-val" style="font-size:13px;" id="dc-lon">028°59.871E</div>
+      <div class="dc-unit">WGS-84</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">DEPTH</div>
+      <div class="dc-val" id="dc-depth">026.7</div>
+      <div class="dc-unit">METRES</div>
+    </div>
+    <div class="data-cell">
+      <div class="dc-label">UKC</div>
+      <div class="dc-val" id="dc-ukc" class="">011.9</div>
+      <div class="dc-unit">METRES</div>
+    </div>
+  </div>
+
+  <!-- Initial Position & Course -->
+  <div class="sec-hdr" style="margin-top:4px;">Initial Position &amp; Movement</div>
+  <div class="card" style="margin-bottom:4px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+      <div>
+        <label>INIT LATITUDE</label>
+        <input type="text" id="initLat" value="40°58.283N" onchange="broadcastState()">
+      </div>
+      <div>
+        <label>INIT LONGITUDE</label>
+        <input type="text" id="initLon" value="028°59.871E" onchange="broadcastState()">
+      </div>
+      <div>
+        <label>INITIAL HEADING (°T)</label>
+        <input type="number" id="initHdg" value="011" min="0" max="359" onchange="broadcastState()">
+      </div>
+      <div>
+        <label>INITIAL SOG (kts)</label>
+        <input type="number" id="initSog" value="0" min="0" max="30" step="0.5" onchange="broadcastState()">
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS: Route / Weather / Tugs / AIS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('route')">Route &amp; Waypoints</div>
+    <div class="tab" onclick="switchTab('weather')">Weather &amp; Environment</div>
+    <div class="tab" onclick="switchTab('tugs')">Tugs &amp; Pilotage</div>
+    <div class="tab" onclick="switchTab('ais')">AIS / Traffic</div>
+    <div class="tab" onclick="switchTab('failures')">Failures &amp; Hazards</div>
+  </div>
+
+  <!-- Route Tab -->
+  <div class="tab-content active" id="tab-route">
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <button class="btn btn-accent btn-sm" onclick="addWaypoint()">+ Add WPT</button>
+      <button class="btn btn-sm" style="border-color:var(--border);color:var(--text-md);" onclick="clearRoute()">Clear Route</button>
+      <select id="routePreset" style="width:auto;flex:1;font-size:11px;" onchange="loadRoutePreset()">
+        <option value="">— Load Preset Route —</option>
+        <option value="bosphorus_n">Bosphorus Northbound</option>
+        <option value="bosphorus_s">Bosphorus Southbound</option>
+        <option value="suez_n">Suez Canal Northbound</option>
+        <option value="dover_strait">Dover Strait</option>
+        <option value="malacca">Malacca Strait</option>
+        <option value="panama">Panama Canal</option>
+        <option value="gibraltar">Gibraltar Strait</option>
+        <option value="tokyo_bay">Tokyo Bay Approach</option>
+        <option value="rotterdam">Rotterdam Approach</option>
+        <option value="singapore">Singapore Strait</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <table class="route-tbl">
+      <thead>
+        <tr>
+          <th>WPT</th><th>LATITUDE</th><th>LONGITUDE</th>
+          <th>COG (°T)</th><th>DIST (NM)</th><th>SPD (kts)</th><th>ETA</th><th>ACTION</th>
+        </tr>
+      </thead>
+      <tbody id="wptBody">
+      </tbody>
+    </table>
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <div class="data-cell" style="flex:1;text-align:left;">
+        <div class="dc-label">TOTAL DISTANCE</div>
+        <div class="dc-val digi-sm" id="totalDist">0.0 NM</div>
+      </div>
+      <div class="data-cell" style="flex:1;text-align:left;">
+        <div class="dc-label">TOTAL ETA</div>
+        <div class="dc-val digi-sm" id="totalETA">--:-- UTC</div>
+      </div>
+      <div class="data-cell" style="flex:1;text-align:left;">
+        <div class="dc-label">NEXT WPT BRG</div>
+        <div class="dc-val digi-sm" id="nextWptBrg">---°</div>
+      </div>
+    </div>
+    <!-- MOB -->
+    <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
+      <button class="btn btn-danger btn-sm" onclick="markMOB()" style="flex:1;justify-content:center;">
+        ⚠ MARK MOB POSITION
+      </button>
+      <div class="data-cell" style="flex:2;">
+        <div class="dc-label">MOB POSITION</div>
+        <div class="dc-val" style="font-size:12px;" id="mobPos">NOT SET</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weather Tab -->
+  <div class="tab-content" id="tab-weather">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <!-- Wind -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Wind</div>
+        <div class="form-group">
+          <label>WIND DIRECTION (°T — FROM)</label>
+          <div class="slider-row">
+            <input type="range" id="windDir" min="0" max="359" value="225" oninput="updSlider(this,'windDirVal');drawCompass()">
+            <span class="slider-val" id="windDirVal">225°</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>WIND SPEED (knots)</label>
+          <div class="slider-row">
+            <input type="range" id="windSpd" min="0" max="70" value="18" oninput="updSlider(this,'windSpdVal')">
+            <span class="slider-val" id="windSpdVal">18 kts</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>BEAUFORT SCALE</label>
+          <select id="beaufort" onchange="setBeaufort()">
+            <option value="0">Bft 0 — Calm (0 kts)</option>
+            <option value="1">Bft 1 — Light Air (1–3 kts)</option>
+            <option value="2">Bft 2 — Light Breeze (4–6 kts)</option>
+            <option value="3">Bft 3 — Gentle Breeze (7–10 kts)</option>
+            <option value="4">Bft 4 — Moderate Breeze (11–16 kts)</option>
+            <option value="5" selected>Bft 5 — Fresh Breeze (17–21 kts)</option>
+            <option value="6">Bft 6 — Strong Breeze (22–27 kts)</option>
+            <option value="7">Bft 7 — Near Gale (28–33 kts)</option>
+            <option value="8">Bft 8 — Gale (34–40 kts)</option>
+            <option value="9">Bft 9 — Severe Gale (41–47 kts)</option>
+            <option value="10">Bft 10 — Storm (48–55 kts)</option>
+            <option value="11">Bft 11 — Violent Storm (56–63 kts)</option>
+            <option value="12">Bft 12 — Hurricane Force (64+ kts)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Sea State -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Sea State &amp; Swell</div>
+        <div class="form-group">
+          <label>WAVE HEIGHT (m)</label>
+          <div class="slider-row">
+            <input type="range" id="waveHt" min="0" max="15" value="2.5" step="0.5" oninput="updSlider(this,'waveHtVal')">
+            <span class="slider-val" id="waveHtVal">2.5 m</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>WAVE PERIOD (sec)</label>
+          <div class="slider-row">
+            <input type="range" id="wavePeriod" min="3" max="20" value="9" oninput="updSlider(this,'wavePeriodVal')">
+            <span class="slider-val" id="wavePeriodVal">9 s</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>SWELL DIRECTION (°T)</label>
+          <div class="slider-row">
+            <input type="range" id="swellDir" min="0" max="359" value="200" oninput="updSlider(this,'swellDirVal')">
+            <span class="slider-val" id="swellDirVal">200°</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>SWELL HEIGHT (m)</label>
+          <div class="slider-row">
+            <input type="range" id="swellHt" min="0" max="8" value="1.5" step="0.5" oninput="updSlider(this,'swellHtVal')">
+            <span class="slider-val" id="swellHtVal">1.5 m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Current &amp; Tidal Stream</div>
+        <div class="form-group">
+          <label>CURRENT DIRECTION (°T — SETTING)</label>
+          <div class="slider-row">
+            <input type="range" id="currDir" min="0" max="359" value="045" oninput="updSlider(this,'currDirVal')">
+            <span class="slider-val" id="currDirVal">045°</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>CURRENT RATE (knots)</label>
+          <div class="slider-row">
+            <input type="range" id="currRate" min="0" max="8" value="1.2" step="0.1" oninput="updSlider(this,'currRateVal')">
+            <span class="slider-val" id="currRateVal">1.2 kts</span>
+          </div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">Enable Tidal Variation</span>
+          <label class="toggle"><input type="checkbox" id="tidalVar"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="form-group">
+          <label>TIDAL PHASE</label>
+          <select id="tidalPhase">
+            <option>HW Slack</option><option>Flood — Max</option>
+            <option>LW Slack</option><option>Ebb — Max</option>
+            <option>Flood — 3hr before HW</option><option>Ebb — 3hr after HW</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Visibility -->
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Visibility &amp; Atmosphere</div>
+        <div class="form-group">
+          <label>VISIBILITY (NM)</label>
+          <div class="slider-row">
+            <input type="range" id="visibility" min="0" max="20" value="10" step="0.5" oninput="updSlider(this,'visVal');updateVisLabel()">
+            <span class="slider-val" id="visVal">10.0 NM</span>
+          </div>
+          <div id="visLabel" style="font-family:var(--mono);font-size:10px;color:var(--accent2);margin-top:3px;">Good visibility</div>
+        </div>
+        <div class="form-group">
+          <label>CLOUD COVER (oktas)</label>
+          <div class="slider-row">
+            <input type="range" id="cloudCover" min="0" max="8" value="4" oninput="updSlider(this,'cloudVal')">
+            <span class="slider-val" id="cloudVal">4/8</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>TIME OF DAY</label>
+          <select id="timeOfDay">
+            <option>Dawn (0500)</option><option>Morning (0800)</option>
+            <option selected>Day (1200)</option><option>Afternoon (1500)</option>
+            <option>Dusk (1800)</option><option>Night (2200)</option>
+            <option>Midnight (0000)</option><option>Pre-dawn (0300)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>PRECIPITATION</label>
+          <select id="precip">
+            <option>None</option><option>Drizzle</option><option>Rain — Light</option>
+            <option>Rain — Moderate</option><option>Rain — Heavy</option>
+            <option>Snow — Light</option><option>Snow — Heavy</option><option>Hail</option>
+          </select>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">Fog / Restricted Visibility</span>
+          <label class="toggle"><input type="checkbox" id="fogEnable" onchange="toggleFog()"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">Lightning Storm</span>
+          <label class="toggle"><input type="checkbox" id="lightning"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tugs Tab -->
+  <div class="tab-content" id="tab-tugs">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Tug Assignment</div>
+        <div class="form-group">
+          <label>PORT TUG</label>
+          <select id="tugPort">
+            <option value="none">No Tug</option>
+            <option value="azimuth_50">Azimuth 50T BP</option>
+            <option value="azimuth_80">Azimuth 80T BP</option>
+            <option value="azimuth_120">Azimuth 120T BP</option>
+            <option value="voith_40">Voith-Schneider 40T</option>
+            <option value="conventional_35">Conventional 35T</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>STBD TUG</label>
+          <select id="tugStbd">
+            <option value="none">No Tug</option>
+            <option value="azimuth_50">Azimuth 50T BP</option>
+            <option value="azimuth_80" selected>Azimuth 80T BP</option>
+            <option value="azimuth_120">Azimuth 120T BP</option>
+            <option value="voith_40">Voith-Schneider 40T</option>
+            <option value="conventional_35">Conventional 35T</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>STERN TUG</label>
+          <select id="tugStern">
+            <option value="none">No Tug</option>
+            <option value="azimuth_50" selected>Azimuth 50T BP</option>
+            <option value="azimuth_80">Azimuth 80T BP</option>
+            <option value="conventional_35">Conventional 35T</option>
+          </select>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">Pilot Onboard</span>
+          <label class="toggle"><input type="checkbox" id="pilotOnboard" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">VHF Comms Active</span>
+          <label class="toggle"><input type="checkbox" id="vhfComms" checked><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Anchorage Setup</div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">Port Anchor Ready</span>
+          <label class="toggle"><input type="checkbox" id="anchorPortReady" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label">Stbd Anchor Ready</span>
+          <label class="toggle"><input type="checkbox" id="anchorStbdReady" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="form-group">
+          <label>PORT CHAIN SCOPE (shackles)</label>
+          <input type="number" id="portScope" value="0" min="0" max="12">
+        </div>
+        <div class="form-group">
+          <label>STBD CHAIN SCOPE (shackles)</label>
+          <input type="number" id="stbdScope" value="0" min="0" max="12">
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label>VHF WORKING CHANNEL</label>
+          <select id="vhfCh">
+            <option>Ch 16 — Distress &amp; Calling</option>
+            <option>Ch 06 — Inter-ship safety</option>
+            <option selected>Ch 08 — Port Ops</option>
+            <option>Ch 10 — Vessel Traffic</option>
+            <option>Ch 12 — VTS</option>
+            <option>Ch 14 — VTS</option>
+            <option>Ch 68 — Working</option>
+            <option>Ch 69 — Working</option>
+            <option>Ch 72 — Working</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AIS Tab -->
+  <div class="tab-content" id="tab-ais">
+    <div class="form-row" style="margin-bottom:8px;">
+      <div>
+        <label>OWN SHIP MMSI</label>
+        <input type="text" id="ownMmsi" value="271000001">
+      </div>
+      <div>
+        <label>AIS CLASS</label>
+        <select id="aisClass">
+          <option>Class A — SOLAS</option>
+          <option>Class B</option>
+          <option>AIS Off</option>
+        </select>
+      </div>
+    </div>
+    <div class="sec-hdr" style="font-size:12px;margin-bottom:6px;">Traffic Density</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;">
+      <div class="form-group">
+        <label>TRAFFIC DENSITY</label>
+        <select id="trafficDensity" onchange="broadcastState()">
+          <option>None</option><option>Light</option>
+          <option selected>Moderate</option><option>Heavy</option><option>Congested</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>AREA TYPE</label>
+        <select id="areaType">
+          <option>Open Ocean</option><option>Coastal</option>
+          <option selected>Restricted Channel</option><option>TSS / VTS Zone</option>
+          <option>Anchorage Area</option><option>Port Approach</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>AUTO-SPAWN TARGETS</label>
+        <select id="autoSpawn">
+          <option value="0">Disabled</option>
+          <option value="5">Every 5 min</option>
+          <option value="10">Every 10 min</option>
+          <option value="15">Every 15 min</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Failures Tab -->
+  <div class="tab-content" id="tab-failures">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Navigation Equipment Failures</div>
+        <div class="toggle-wrap"><span class="toggle-label">Main Gyro Failure</span><label class="toggle"><input type="checkbox" id="f_gyro"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">GPS Failure</span><label class="toggle"><input type="checkbox" id="f_gps"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Radar Failure (X-Band)</span><label class="toggle"><input type="checkbox" id="f_radar"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">ECDIS Failure</span><label class="toggle"><input type="checkbox" id="f_ecdis"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">AIS Failure</span><label class="toggle"><input type="checkbox" id="f_ais"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Echo Sounder Failure</span><label class="toggle"><input type="checkbox" id="f_echo"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Speed Log Failure</span><label class="toggle"><input type="checkbox" id="f_log"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Autopilot Failure</span><label class="toggle"><input type="checkbox" id="f_ap"><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title">Machinery &amp; Structural Failures</div>
+        <div class="toggle-wrap"><span class="toggle-label">Main Engine Failure</span><label class="toggle"><input type="checkbox" id="f_me"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Steering Gear Failure</span><label class="toggle"><input type="checkbox" id="f_steer"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Bow Thruster Failure</span><label class="toggle"><input type="checkbox" id="f_bt"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Power Blackout</span><label class="toggle"><input type="checkbox" id="f_power"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Flooding — Fwd Compartment</span><label class="toggle"><input type="checkbox" id="f_flood"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Fire — Engine Room</span><label class="toggle"><input type="checkbox" id="f_fire"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Groundin / Bottom Contact</span><label class="toggle"><input type="checkbox" id="f_ground"><span class="toggle-slider"></span></label></div>
+        <div class="toggle-wrap"><span class="toggle-label">Man Overboard</span><label class="toggle"><input type="checkbox" id="f_mob" onchange="if(this.checked)markMOB()"><span class="toggle-slider"></span></label></div>
+        <div style="margin-top:8px;">
+          <button class="btn btn-danger btn-full" onclick="triggerAllFailures()">⚡ TRIGGER SELECTED FAILURES</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end center -->
+
+
+<!-- ════════════════════════════════════════════
+     RIGHT PANEL — TARGET SHIPS + ENGINE
+════════════════════════════════════════════ -->
+<div class="panel" id="rightPanel">
+
+  <div class="panel-hdr"><span class="dot"></span>Target Ships</div>
+
+  <!-- Target selection -->
+  <div class="card">
+    <div class="card-title">Add Target</div>
+    <div class="form-group">
+      <label>VESSEL TYPE</label>
+      <select id="tgtType">
+        <option value="tanker">Tanker</option>
+        <option value="container">Container Ship</option>
+        <option value="bulk">Bulk Carrier</option>
+        <option value="ferry">Ferry</option>
+        <option value="fishing">Fishing Vessel</option>
+        <option value="naval">Naval</option>
+        <option value="yacht">Sailing Yacht</option>
+        <option value="speedboat">Speed Boat</option>
+        <option value="tug">Tug</option>
+        <option value="dredger">Dredger</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>BRG FROM OWN (°T)</label>
+        <input type="number" id="tgtBrg" value="045" min="0" max="359">
+      </div>
+      <div class="form-group">
+        <label>RANGE (NM)</label>
+        <input type="number" id="tgtRange" value="6.0" min="0.1" max="24" step="0.1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>COURSE (°T)</label>
+        <input type="number" id="tgtCourse" value="190" min="0" max="359">
+      </div>
+      <div class="form-group">
+        <label>SPEED (kts)</label>
+        <input type="number" id="tgtSpeed" value="12" min="0" max="30" step="0.5">
+      </div>
+    </div>
+    <button class="btn btn-accent btn-sm btn-full" onclick="addTarget()">+ ADD TARGET</button>
+  </div>
+
+  <!-- Target list -->
+  <div class="card-title" style="margin:0 0 6px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text-md);">
+    ACTIVE TARGETS (<span id="tgtCount">0</span>/20)
+  </div>
+  <div id="targetList"></div>
+
+  <!-- Engine Telegraph -->
+  <div class="panel-hdr" style="margin-top:8px;"><span class="dot"></span>Engine Order</div>
+  <div class="card">
+    <div class="card-title">Telegraph</div>
+    <div class="telegraph">
+      <div class="tele-positions">
+        <div class="tele-pos ahead" onclick="setTelegraph(this,'FULL AHEAD')" id="t_fa">FULL AHEAD</div>
+        <div class="tele-pos ahead" onclick="setTelegraph(this,'HALF AHEAD')" id="t_ha">HALF AHEAD</div>
+        <div class="tele-pos ahead" onclick="setTelegraph(this,'SLOW AHEAD')" id="t_sa">SLOW AHEAD</div>
+        <div class="tele-pos ahead" onclick="setTelegraph(this,'DEAD SLOW AHEAD')" id="t_dsa">DEAD SLOW AHEAD</div>
+        <div class="tele-pos stop active" onclick="setTelegraph(this,'STOP')" id="t_stop">STOP</div>
+        <div class="tele-pos astern" onclick="setTelegraph(this,'DEAD SLOW ASTERN')" id="t_dss">DEAD SLOW ASTERN</div>
+        <div class="tele-pos astern" onclick="setTelegraph(this,'SLOW ASTERN')" id="t_ss">SLOW ASTERN</div>
+        <div class="tele-pos astern" onclick="setTelegraph(this,'HALF ASTERN')" id="t_hs">HALF ASTERN</div>
+        <div class="tele-pos astern" onclick="setTelegraph(this,'FULL ASTERN')" id="t_fas">FULL ASTERN</div>
+      </div>
+    </div>
+    <div style="margin-top:6px;">
+      <div class="dc-label">ENGINE ORDER</div>
+      <div class="digi" id="currentOrder">STOP</div>
+    </div>
+  </div>
+
+  <!-- RPM display -->
+  <div class="card">
+    <div class="card-title">RPM &amp; Pitch</div>
+    <div class="data-grid cols2" style="gap:6px">
+      <div class="data-cell">
+        <div class="dc-label">STBD RPM</div>
+        <div class="dc-val" id="stbdRpm">000</div>
+      </div>
+      <div class="data-cell">
+        <div class="dc-label">PORT RPM</div>
+        <div class="dc-val" id="portRpm">000</div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:6px">
+      <label>RUDDER ANGLE SET (°)</label>
+      <div class="slider-row">
+        <input type="range" id="rudderSet" min="-35" max="35" value="0" oninput="updRudder(this)">
+        <span class="slider-val" id="rudderVal">0°</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Messages -->
+  <div class="panel-hdr" style="margin-top:4px;"><span class="dot"></span>System Log</div>
+  <div id="sysLog" style="max-height:150px;overflow-y:auto;">
+    <div class="msg-box">System initialized — BTM Simulator v2.0</div>
+    <div class="msg-box">Own ship loaded: MV BOSPHORUS STAR</div>
+    <div class="msg-box">Exercise area: Bosphorus Strait</div>
+  </div>
+
+</div><!-- end right panel -->
+
+</div><!-- end main -->
+
+<script>
+// ══════════════════════════════════════════
+// BROADCAST CHANNEL — sync with all modules
+// ══════════════════════════════════════════
+const bc = new BroadcastChannel('btm_sim');
+
+function broadcastState() {
+  const state = getSimState();
+  bc.postMessage({ type:'STATE_UPDATE', data:state });
+}
+
+bc.onmessage = (e) => {
+  if(e.data.type === 'REQUEST_STATE') broadcastState();
+};
+
+// ══════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s} UTC`;
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ══════════════════════════════════════════
+// SLIDER UPDATE
+// ══════════════════════════════════════════
+function updSlider(el, valId) {
+  const v = parseFloat(el.value);
+  const step = parseFloat(el.step) || 1;
+  let suffix = '';
+  if(valId.includes('Dir') || valId.includes('Brg')) suffix = '°';
+  else if(valId.includes('Spd') || valId.includes('Rate') || valId.includes('Sog') || valId.includes('manov')) suffix = ' kts';
+  else if(valId.includes('Ht') || valId.includes('waveHt') || valId.includes('swellHt')) suffix = ' m';
+  else if(valId.includes('Period')) suffix = ' s';
+  else if(valId.includes('vis')) suffix = ' NM';
+  else if(valId.includes('cloud')) suffix = '/8';
+  else if(valId.includes('Speed')) suffix = ' kts';
+  const disp = step < 1 ? v.toFixed(1) : v.toFixed(0);
+  document.getElementById(valId).textContent = disp + suffix;
+  // update slider gradient
+  const min = parseFloat(el.min), max = parseFloat(el.max);
+  const pct = ((v - min) / (max - min)) * 100;
+  el.style.background = `linear-gradient(90deg, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+  broadcastState();
+}
+
+// init all sliders
+document.querySelectorAll('input[type=range]').forEach(el => {
+  const min = parseFloat(el.min), max = parseFloat(el.max), v = parseFloat(el.value);
+  const pct = ((v - min) / (max - min)) * 100;
+  el.style.background = `linear-gradient(90deg, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+});
+
+// ══════════════════════════════════════════
+// RUDDER
+// ══════════════════════════════════════════
+function updRudder(el) {
+  const v = parseInt(el.value);
+  const s = v >= 0 ? `${v}° STBD` : `${Math.abs(v)}° PORT`;
+  document.getElementById('rudderVal').textContent = s;
+  const min=-35,max=35, pct=((v-min)/(max-min))*100;
+  el.style.background = `linear-gradient(90deg, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+  broadcastState();
+}
+
+// ══════════════════════════════════════════
+// SHIP TYPE PRESETS
+// ══════════════════════════════════════════
+const shipPresets = {
+  container: { loa:302, beam:48.2, draftFwd:14.2, draftAft:14.8, displ:85000, grt:54000, dwt:100000, bridgeHt:35, maxRpm:105, mcrPower:26500, maxSpeedSld:22, name:'MV BOSPHORUS STAR' },
+  tanker_vlcc: { loa:330, beam:58, draftFwd:20.5, draftAft:21, displ:320000, grt:162000, dwt:314000, bridgeHt:28, maxRpm:76, mcrPower:31600, maxSpeedSld:16, name:'MT OCEAN TITAN' },
+  tanker_aframax: { loa:248, beam:44, draftFwd:14.5, draftAft:15.2, displ:120000, grt:58000, dwt:115000, bridgeHt:25, maxRpm:100, mcrPower:12000, maxSpeedSld:14.5, name:'MT BLACK SEA' },
+  bulk: { loa:225, beam:32.3, draftFwd:13.2, draftAft:14.1, displ:85000, grt:44000, dwt:76000, bridgeHt:22, maxRpm:122, mcrPower:9480, maxSpeedSld:14, name:'MV GRAIN MASTER' },
+  lng: { loa:295, beam:46, draftFwd:11.5, draftAft:12.3, displ:95000, grt:96000, dwt:78000, bridgeHt:38, maxRpm:92, mcrPower:24000, maxSpeedSld:19.5, name:'LNG NAVIGATOR' },
+  ferry: { loa:180, beam:28, draftFwd:6.5, draftAft:7.2, displ:18000, grt:28000, dwt:5000, bridgeHt:24, maxRpm:500, mcrPower:22000, maxSpeedSld:22, name:'MV ISTANBUL STAR' },
+  cruise: { loa:310, beam:36.8, draftFwd:8.5, draftAft:9.2, displ:90000, grt:137000, dwt:12000, bridgeHt:44, maxRpm:120, mcrPower:44000, maxSpeedSld:23, name:'MS OCEAN DREAM' },
+  tug: { loa:32, beam:10.5, draftFwd:4.2, draftAft:5.1, displ:500, grt:280, dwt:50, bridgeHt:8, maxRpm:700, mcrPower:2400, maxSpeedSld:12, name:'TUG HERCULES' },
+  naval: { loa:140, beam:18, draftFwd:5.2, draftAft:5.8, displ:4500, grt:2200, dwt:500, bridgeHt:18, maxRpm:400, mcrPower:36000, maxSpeedSld:28, name:'TCG MARMARA' },
+};
+
+function updateShipType() {
+  const t = document.getElementById('ownShipType').value;
+  const p = shipPresets[t];
+  if(!p) return;
+  document.getElementById('loa').value = p.loa;
+  document.getElementById('beam').value = p.beam;
+  document.getElementById('draftFwd').value = p.draftFwd;
+  document.getElementById('draftAft').value = p.draftAft;
+  document.getElementById('displ').value = p.displ;
+  document.getElementById('grt').value = p.grt;
+  document.getElementById('dwt').value = p.dwt;
+  document.getElementById('bridgeHt').value = p.bridgeHt;
+  document.getElementById('maxRpm').value = p.maxRpm;
+  document.getElementById('mcrPower').value = p.mcrPower;
+  document.getElementById('maxSpeedSld').value = p.maxSpeedSld;
+  document.getElementById('maxSpeedVal').textContent = p.maxSpeedSld + '.0 kts';
+  document.getElementById('vesselName').value = p.name;
+  addLog(`Ship type changed to: ${p.name}`);
+  broadcastState();
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ══════════════════════════════════════════
+// WAYPOINTS
+// ══════════════════════════════════════════
+let waypoints = [];
+const routePresets = {
+  bosphorus_n: [
+    { lat:'40°58.2N', lon:'028°59.8E', spd:8 },
+    { lat:'41°01.5N', lon:'028°58.2E', spd:8 },
+    { lat:'41°05.8N', lon:'028°56.1E', spd:10 },
+    { lat:'41°09.2N', lon:'028°54.8E', spd:10 },
+    { lat:'41°13.6N', lon:'028°57.3E', spd:12 },
+  ],
+  bosphorus_s: [
+    { lat:'41°13.6N', lon:'028°57.3E', spd:8 },
+    { lat:'41°09.2N', lon:'028°54.8E', spd:10 },
+    { lat:'41°05.8N', lon:'028°56.1E', spd:10 },
+    { lat:'41°01.5N', lon:'028°58.2E', spd:8 },
+    { lat:'40°58.2N', lon:'028°59.8E', spd:6 },
+  ],
+  dover_strait: [
+    { lat:'51°06.2N', lon:'001°52.4E', spd:12 },
+    { lat:'51°10.8N', lon:'001°41.6E', spd:12 },
+    { lat:'51°14.4N', lon:'001°25.8E', spd:14 },
+    { lat:'51°18.2N', lon:'001°08.3E', spd:14 },
+  ],
+  singapore: [
+    { lat:'01°10.2N', lon:'103°54.8E', spd:10 },
+    { lat:'01°14.6N', lon:'103°48.3E', spd:10 },
+    { lat:'01°18.9N', lon:'103°38.2E', spd:12 },
+  ],
+};
+
+function loadRoutePreset() {
+  const v = document.getElementById('routePreset').value;
+  if(!v || !routePresets[v]) return;
+  waypoints = routePresets[v].map((w,i) => ({...w, id:i+1}));
+  renderWaypoints();
+  addLog(`Route loaded: ${v.replace(/_/g,' ').toUpperCase()}`);
+}
+
+function addWaypoint() {
+  const id = waypoints.length + 1;
+  waypoints.push({ id, lat:'', lon:'', spd:10 });
+  renderWaypoints();
+}
+
+function removeWaypoint(id) {
+  waypoints = waypoints.filter(w => w.id !== id);
+  waypoints.forEach((w,i) => w.id = i+1);
+  renderWaypoints();
+}
+
+function renderWaypoints() {
+  const body = document.getElementById('wptBody');
+  body.innerHTML = '';
+  waypoints.forEach((w, i) => {
+    const cog = i < waypoints.length-1 ? calcCOG(w, waypoints[i+1]) : '---';
+    const dist = i < waypoints.length-1 ? calcDist(w, waypoints[i+1]) : '---';
+    const eta = dist !== '---' ? calcETA(dist, w.spd) : '---';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="num">${String(w.id).padStart(2,'0')}</td>
+      <td><input type="text" value="${w.lat}" style="width:100%;background:transparent;border:none;color:var(--accent2);font-family:var(--mono);font-size:11px;" onchange="waypoints[${i}].lat=this.value;broadcastState()"></td>
+      <td><input type="text" value="${w.lon}" style="width:100%;background:transparent;border:none;color:var(--accent2);font-family:var(--mono);font-size:11px;" onchange="waypoints[${i}].lon=this.value;broadcastState()"></td>
+      <td class="act">${cog}</td>
+      <td class="num">${dist !== '---' ? parseFloat(dist).toFixed(1) : '---'}</td>
+      <td><input type="number" value="${w.spd}" min="1" max="28" style="width:50px;background:transparent;border:none;color:var(--accent);font-family:var(--mono);font-size:11px;" onchange="waypoints[${i}].spd=parseFloat(this.value);renderWaypoints()"></td>
+      <td class="num">${eta}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="removeWaypoint(${w.id})" style="padding:2px 6px;font-size:10px;">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+  broadcastState();
+}
+
+function calcCOG(a, b) {
+  if(!a.lat||!a.lon||!b.lat||!b.lon) return '---';
+  return Math.floor(Math.random()*360).toString().padStart(3,'0')+'°';
+}
+function calcDist(a, b) {
+  if(!a.lat||!a.lon||!b.lat||!b.lon) return '---';
+  return (Math.random()*10+1).toFixed(1);
+}
+function calcETA(dist, spd) {
+  if(!dist || !spd) return '---';
+  const h = parseFloat(dist)/parseFloat(spd);
+  const hh = Math.floor(h);
+  const mm = Math.floor((h-hh)*60);
+  const now = new Date();
+  now.setUTCHours(now.getUTCHours()+hh);
+  now.setUTCMinutes(now.getUTCMinutes()+mm);
+  return now.getUTCHours().toString().padStart(2,'0')+':'+now.getUTCMinutes().toString().padStart(2,'0');
+}
+
+function clearRoute() {
+  waypoints = [];
+  renderWaypoints();
+  addLog('Route cleared');
+}
+
+// ══════════════════════════════════════════
+// MOB
+// ══════════════════════════════════════════
+function markMOB() {
+  const lat = document.getElementById('dc-lat').textContent;
+  const lon = document.getElementById('dc-lon').textContent;
+  document.getElementById('mobPos').textContent = `${lat} / ${lon}`;
+  document.getElementById('mobPos').style.color = 'var(--danger)';
+  addLog('⚠ MOB MARKED at ' + lat + ' ' + lon, 'danger');
+  bc.postMessage({ type:'MOB', lat, lon });
+}
+
+// ══════════════════════════════════════════
+// TARGET SHIPS
+// ══════════════════════════════════════════
+let targets = [];
+let tgtIdCounter = 1;
+
+function addTarget() {
+  if(targets.length >= 20) { addLog('Max 20 targets reached','warn'); return; }
+  const t = {
+    id: tgtIdCounter++,
+    type: document.getElementById('tgtType').value,
+    brg: parseInt(document.getElementById('tgtBrg').value),
+    range: parseFloat(document.getElementById('tgtRange').value),
+    course: parseInt(document.getElementById('tgtCourse').value),
+    speed: parseFloat(document.getElementById('tgtSpeed').value),
+    status: 'moving',
+    mmsi: '255' + Math.floor(Math.random()*9000000+1000000),
+    name: genTargetName(document.getElementById('tgtType').value)
+  };
+  targets.push(t);
+  renderTargets();
+  addLog(`Target added: ${t.name} (${t.type}) — BRG ${t.brg}° / ${t.range}NM`);
+  broadcastState();
+}
+
+const vesselNames = {
+  tanker:['OLYMPIC FLAIR','AEGEAN GLORY','NEPTUNE SPIRIT','ATLAS TRADER'],
+  container:['EVER GIVEN','MAERSK LIMA','MSC OSCAR','COSCO SHIPPING'],
+  bulk:['GRAIN EAGLE','IRON DUKE','CAPE STORM','PACIFIC WIND'],
+  ferry:['SEA STAR','BLUE HORIZON','ISLAND PRIDE','MARMARA QUEEN'],
+  fishing:['ATLANTIC DAWN','NORTH SEA','ALBATROSS','FISHING GLORY'],
+  naval:['TCG ADATEPE','HMS DRAGON','USS COLE','IFN ALVAND'],
+  yacht:['SERENITY','OCEAN DREAMS','WINDWARD','BLUE SAIL'],
+  speedboat:['FALCON','THUNDER','ARROW','SWIFT'],
+  tug:['TITAN','HERCULES','GOLIATH','SAMSON'],
+  dredger:['SEA WORKER','CAPITAL DREDGE','SAND EAGLE','POSEIDON'],
+};
+function genTargetName(type) {
+  const arr = vesselNames[type] || ['VESSEL'];
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function renderTargets() {
+  const list = document.getElementById('targetList');
+  list.innerHTML = '';
+  document.getElementById('tgtCount').textContent = targets.length;
+  targets.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'target-item' + (t.selected ? ' active':'');
+    div.innerHTML = `
+      <span class="target-num">T${String(t.id).padStart(2,'0')}</span>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="target-name">${t.name}</span>
+          <span class="target-status ${t.speed>0?'ts-moving':'ts-stopped'}"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:2px;">
+          <span class="target-type">${t.type.toUpperCase()}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--accent2)">BRG ${String(t.brg).padStart(3,'0')}° / ${t.range}NM</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-md)">CSE ${String(t.course).padStart(3,'0')}° ${t.speed}kts</span>
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="removeTarget(${t.id})" style="padding:2px 6px;font-size:10px;min-width:24px;">✕</button>
+    `;
+    div.onclick = (e) => { if(e.target.tagName!=='BUTTON'){selectTarget(t.id);} };
+    list.appendChild(div);
+  });
+}
+
+function removeTarget(id) {
+  targets = targets.filter(t => t.id !== id);
+  renderTargets();
+  broadcastState();
+}
+
+function selectTarget(id) {
+  targets.forEach(t => t.selected = t.id === id);
+  renderTargets();
+}
+
+// ══════════════════════════════════════════
+// TELEGRAPH
+// ══════════════════════════════════════════
+const rpmMap = {
+  'FULL AHEAD':105, 'HALF AHEAD':72, 'SLOW AHEAD':42, 'DEAD SLOW AHEAD':21,
+  'STOP':0, 'DEAD SLOW ASTERN':-21, 'SLOW ASTERN':-42, 'HALF ASTERN':-72, 'FULL ASTERN':-105
+};
+let currentTelegraph = 'STOP';
+
+function setTelegraph(el, order) {
+  document.querySelectorAll('.tele-pos').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentTelegraph = order;
+  document.getElementById('currentOrder').textContent = order;
+  const rpm = rpmMap[order] || 0;
+  document.getElementById('stbdRpm').textContent = String(Math.abs(rpm)).padStart(3,'0');
+  document.getElementById('portRpm').textContent = String(Math.abs(rpm)).padStart(3,'0');
+  addLog(`Engine order: ${order} (${rpm} RPM)`);
+  broadcastState();
+}
+
+// ══════════════════════════════════════════
+// WEATHER
+// ══════════════════════════════════════════
+function setBeaufort() {
+  const bftSpeeds = [0,2,5,9,13,18,25,31,37,44,51,60,70];
+  const bft = parseInt(document.getElementById('beaufort').value);
+  const spd = bftSpeeds[bft];
+  document.getElementById('windSpd').value = spd;
+  updSlider(document.getElementById('windSpd'),'windSpdVal');
+  broadcastState();
+}
+
+function updateVisLabel() {
+  const v = parseFloat(document.getElementById('visibility').value);
+  const labels = [[0.1,'Dense Fog'],[0.5,'Thick Fog'],[1,'Moderate Fog'],[2,'Slight Fog/Mist'],[5,'Moderate Visibility'],[10,'Good Visibility'],[99,'Excellent Visibility']];
+  for(const [thresh,label] of labels) {
+    if(v <= thresh) { document.getElementById('visLabel').textContent = label; return; }
+  }
+  document.getElementById('visLabel').textContent = 'Excellent Visibility';
+}
+
+function toggleFog() {
+  const on = document.getElementById('fogEnable').checked;
+  if(on) {
+    document.getElementById('visibility').value = 0.5;
+    updSlider(document.getElementById('visibility'),'visVal');
+    updateVisLabel();
+  }
+}
+
+// ══════════════════════════════════════════
+// FAILURES
+// ══════════════════════════════════════════
+function triggerAllFailures() {
+  const failures = [];
+  const checks = ['f_gyro','f_gps','f_radar','f_ecdis','f_ais','f_echo','f_log','f_ap','f_me','f_steer','f_bt','f_power','f_flood','f_fire','f_ground'];
+  checks.forEach(id => {
+    const el = document.getElementById(id);
+    if(el && el.checked) failures.push(id.replace('f_',''));
+  });
+  if(failures.length) {
+    addLog(`⚡ FAILURES TRIGGERED: ${failures.join(', ').toUpperCase()}`, 'danger');
+    bc.postMessage({ type:'FAILURES', failures });
+  } else {
+    addLog('No failures selected', 'warn');
+  }
+}
+
+// ══════════════════════════════════════════
+// APPLY / RESET / ESTOP
+// ══════════════════════════════════════════
+function applyAll() {
+  broadcastState();
+  addLog('All parameters applied and broadcast to slave stations');
+}
+
+function resetDefaults() {
+  document.getElementById('ownShipType').value = 'container';
+  updateShipType();
+  addLog('Defaults restored');
+}
+
+function emergencyStop() {
+  setTelegraph(document.getElementById('t_stop'), 'STOP');
+  bc.postMessage({ type:'EMERGENCY_STOP' });
+  addLog('⚡ EMERGENCY STOP EXECUTED', 'danger');
+}
+
+// ══════════════════════════════════════════
+// STATE OBJECT
+// ══════════════════════════════════════════
+function getSimState() {
+  return {
+    ownShip: {
+      name: document.getElementById('vesselName').value,
+      type: document.getElementById('ownShipType').value,
+      imo: document.getElementById('imoNum').value,
+      callSign: document.getElementById('callSign').value,
+      flag: document.getElementById('flagState').value,
+      loa: parseFloat(document.getElementById('loa').value),
+      beam: parseFloat(document.getElementById('beam').value),
+      draftFwd: parseFloat(document.getElementById('draftFwd').value),
+      draftAft: parseFloat(document.getElementById('draftAft').value),
+      displ: parseFloat(document.getElementById('displ').value),
+      grt: parseFloat(document.getElementById('grt').value),
+      dwt: parseFloat(document.getElementById('dwt').value),
+      bridgeHt: parseFloat(document.getElementById('bridgeHt').value),
+      bulbousBow: document.getElementById('bulbousBow').checked,
+      twinScrew: document.getElementById('twinScrew').checked,
+      cpp: document.getElementById('cpp').checked,
+      bowThruster: document.getElementById('bowThruster').checked,
+      maxRpm: parseFloat(document.getElementById('maxRpm').value),
+      maxSpeed: parseFloat(document.getElementById('maxSpeedSld').value),
+      loadCond: document.getElementById('loadCond').value,
+    },
+    position: {
+      lat: document.getElementById('initLat').value,
+      lon: document.getElementById('initLon').value,
+      hdg: parseFloat(document.getElementById('initHdg').value),
+      sog: parseFloat(document.getElementById('initSog').value),
+    },
+    telegraph: currentTelegraph,
+    rudder: parseInt(document.getElementById('rudderSet').value),
+    waypoints: waypoints,
+    targets: targets,
+    weather: {
+      windDir: parseInt(document.getElementById('windDir').value),
+      windSpd: parseInt(document.getElementById('windSpd').value),
+      waveHt: parseFloat(document.getElementById('waveHt').value),
+      wavePeriod: parseInt(document.getElementById('wavePeriod').value),
+      swellDir: parseInt(document.getElementById('swellDir').value),
+      swellHt: parseFloat(document.getElementById('swellHt').value),
+      currDir: parseInt(document.getElementById('currDir').value),
+      currRate: parseFloat(document.getElementById('currRate').value),
+      visibility: parseFloat(document.getElementById('visibility').value),
+      cloudCover: parseInt(document.getElementById('cloudCover').value),
+      timeOfDay: document.getElementById('timeOfDay').value,
+      fog: document.getElementById('fogEnable').checked,
+    }
+  };
+}
+
+// ══════════════════════════════════════════
+// LIVE DISPLAY SIMULATION
+// ══════════════════════════════════════════
+let simSog = 0, simHdg = 11, simRot = 0;
+function updateLiveDisplay() {
+  // Gradually approach ordered speed
+  const targetRpm = rpmMap[currentTelegraph] || 0;
+  const targetSpd = Math.abs(targetRpm) / 105 * 22 * (targetRpm < 0 ? -1 : 1);
+  simSog += (targetSpd - simSog) * 0.02;
+
+  document.getElementById('dc-sog').textContent = Math.abs(simSog).toFixed(1).padStart(4,'0');
+  document.getElementById('dc-hdg').textContent = (Math.abs(simHdg) % 360).toFixed(1).padStart(5,'0');
+  document.getElementById('dc-cog').textContent = (Math.abs(simHdg + parseInt(document.getElementById('rudderSet').value)*0.1) % 360).toFixed(1).padStart(5,'0');
+  document.getElementById('dc-rot').textContent = (parseInt(document.getElementById('rudderSet').value) * 0.3).toFixed(1);
+
+  // Depth from a plausible Bosphorus chart
+  const depths = [26.7, 27.1, 25.8, 28.3, 24.5, 22.1, 30.2, 31.5];
+  const depth = depths[Math.floor(Date.now()/5000) % depths.length];
+  const draft = parseFloat(document.getElementById('draftAft').value) || 14.8;
+  const ukc = depth - draft;
+  document.getElementById('dc-depth').textContent = depth.toFixed(1).padStart(5,'0');
+  const ukcEl = document.getElementById('dc-ukc');
+  ukcEl.textContent = ukc.toFixed(1).padStart(5,'0');
+  ukcEl.className = 'dc-val' + (ukc < 3 ? ' warn' : '');
+}
+setInterval(updateLiveDisplay, 1000);
+
+// ══════════════════════════════════════════
+// SYSTEM LOG
+// ══════════════════════════════════════════
+function addLog(msg, type='info') {
+  const log = document.getElementById('sysLog');
+  const d = document.createElement('div');
+  d.className = 'msg-box' + (type==='danger'?' danger':type==='warn'?' warn':'');
+  const now = new Date();
+  const ts = now.getUTCHours().toString().padStart(2,'0')+':'+now.getUTCMinutes().toString().padStart(2,'0')+':'+now.getUTCSeconds().toString().padStart(2,'0');
+  d.textContent = `[${ts}] ${msg}`;
+  log.insertBefore(d, log.firstChild);
+  if(log.children.length > 50) log.removeChild(log.lastChild);
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(function init() {
+  // Load Bosphorus default route
+  document.getElementById('routePreset').value = 'bosphorus_n';
+  loadRoutePreset();
+  // Broadcast initial state
+  setTimeout(broadcastState, 500);
+  addLog('BTM Simulator — Master Station A online');
+  addLog('Exercise area: Bosphorus Strait — Group 1');
+})();
+</script>
+<div style="position:fixed;bottom:8px;left:12px;z-index:9999;pointer-events:none;"><span style="font-family:Georgia,serif;font-size:15px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5);">CASY SIMULATIONS</span></div>
+</body>
+</html>

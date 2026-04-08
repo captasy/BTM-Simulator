@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTM Simulator — Conning Display</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#060c14;color:#c8dff0;font-family:'Share Tech Mono',monospace;font-size:11px;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9000;}
+
+/* LAYOUT */
+#wrap{display:grid;grid-template-columns:220px 1fr 220px;grid-template-rows:36px 1fr 36px;height:100vh;width:100vw;gap:0;}
+#topbar{grid-column:1/4;background:#030810;border-bottom:1px solid #0d2a45;display:flex;align-items:center;padding:0 12px;gap:10px;}
+#botbar{grid-column:1/4;background:#030810;border-top:1px solid #0d2a45;display:flex;align-items:center;padding:0 12px;gap:16px;font-size:10px;}
+#leftcol{background:#050d1a;border-right:1px solid #0d2a45;overflow-y:auto;padding:6px;}
+#rightcol{background:#050d1a;border-left:1px solid #0d2a45;overflow-y:auto;padding:6px;}
+#center{background:#060c14;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px;padding:6px;overflow:hidden;}
+
+/* TOP BAR */
+.tb-logo{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#00d4ff;letter-spacing:3px;}
+.tb-logo span{color:#00ff9d;}
+.tb-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:2px;color:#4a8ab0;text-transform:uppercase;}
+.tb-clock{font-family:'Share Tech Mono',monospace;font-size:13px;color:#00d4ff;margin-left:auto;}
+.led{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;}
+.led.g{background:#00ff88;box-shadow:0 0 6px #00ff88;}
+.led.r{background:#ff2244;box-shadow:0 0 6px #ff2244;animation:blk 1s infinite;}
+.led.a{background:#ffaa00;box-shadow:0 0 6px #ffaa00;}
+.led.o{background:#1a3a55;}
+.led-lbl{font-size:9px;color:#2a5a7a;margin-right:8px;}
+@keyframes blk{0%,100%{opacity:1}50%{opacity:.1}}
+
+/* SECTION HEADERS */
+.sec{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#00d4ff;border-bottom:1px solid #0d2a45;padding:3px 0 3px;margin-bottom:5px;}
+
+/* CARDS */
+.card{background:#07111e;border:1px solid #0d2a45;border-radius:3px;padding:7px;margin-bottom:5px;}
+
+/* DIGITAL DISPLAYS */
+.digi-lg{background:#020912;border:1px solid #0d2a45;border-radius:2px;font-family:'Share Tech Mono',monospace;font-size:32px;color:#00ff9d;text-align:center;padding:8px 4px;letter-spacing:4px;text-shadow:0 0 16px #00ff9d;margin-bottom:3px;}
+.digi-md{background:#020912;border:1px solid #0d2a45;border-radius:2px;font-family:'Share Tech Mono',monospace;font-size:20px;color:#00d4ff;text-align:center;padding:5px 4px;letter-spacing:3px;text-shadow:0 0 10px #00d4ff;margin-bottom:3px;}
+.digi-sm{background:#020912;border:1px solid #0d2a45;border-radius:2px;font-family:'Share Tech Mono',monospace;font-size:13px;color:#c8dff0;text-align:center;padding:3px 4px;letter-spacing:2px;margin-bottom:3px;}
+.digi-warn{color:#ffaa00;text-shadow:0 0 10px #ffaa00;}
+.digi-danger{color:#ff2244;text-shadow:0 0 10px #ff2244;animation:blk .8s infinite;}
+.digi-label{font-size:8px;color:#1a4a6a;text-align:center;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.digi-grid{display:grid;gap:4px;margin-bottom:4px;}
+.digi-grid.c2{grid-template-columns:1fr 1fr;}
+.digi-grid.c3{grid-template-columns:1fr 1fr 1fr;}
+.digi-grid.c4{grid-template-columns:1fr 1fr 1fr 1fr;}
+
+/* BUTTONS */
+.btn{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 8px;border-radius:2px;border:1px solid #0d2a45;background:#07111e;color:#4a8ab0;cursor:pointer;transition:all .12s;display:block;width:100%;text-align:center;margin-bottom:3px;}
+.btn:hover{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,0.08);}
+.btn.on{background:rgba(0,212,255,0.15);border-color:#00d4ff;color:#00d4ff;}
+.btn.grn{border-color:#00aa55;color:#00ff88;}
+.btn.grn.on,.btn.grn:hover{background:rgba(0,255,136,0.15);border-color:#00ff88;}
+.btn.red{border-color:#881122;color:#ff2244;}
+.btn.red.on,.btn.red:hover{background:rgba(255,34,68,0.15);border-color:#ff2244;}
+.btn.amb{border-color:#aa6600;color:#ffaa00;}
+.btn.amb.on,.btn.amb:hover{background:rgba(255,170,0,0.15);border-color:#ffaa00;}
+.btn2{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:3px;}
+.btn2 .btn{margin-bottom:0;}
+.btn3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-bottom:3px;}
+.btn3 .btn{margin-bottom:0;}
+
+/* INSTRUMENT PANELS */
+.inst-panel{background:#07111e;border:1px solid #0d2a45;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;position:relative;overflow:hidden;}
+.inst-title{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;color:#2a6a8a;text-transform:uppercase;position:absolute;top:5px;left:0;right:0;text-align:center;}
+
+/* FORMS */
+label{font-size:9px;color:#1a4a6a;display:block;margin-bottom:1px;letter-spacing:1px;}
+select,input[type=number]{width:100%;background:#020912;border:1px solid #0d2a45;color:#c8dff0;font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 5px;border-radius:2px;outline:none;margin-bottom:4px;-webkit-appearance:none;appearance:none;}
+select:focus,input:focus{border-color:#00d4ff;}
+select option{background:#030810;}
+input[type=range]{width:100%;accent-color:#00d4ff;cursor:pointer;margin-bottom:3px;}
+
+/* TOGGLE */
+.tog-wrap{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.tog-lbl{font-size:10px;color:#4a8ab0;}
+.tog{position:relative;width:36px;height:18px;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-sl{position:absolute;inset:0;background:#020912;border:1px solid #0d2a45;border-radius:9px;cursor:pointer;transition:.3s;}
+.tog-sl::before{content:'';position:absolute;width:12px;height:12px;left:2px;bottom:2px;background:#1a4a6a;border-radius:50%;transition:.3s;}
+.tog input:checked + .tog-sl{background:rgba(0,212,255,0.2);border-color:#00d4ff;}
+.tog input:checked + .tog-sl::before{transform:translateX(18px);background:#00d4ff;box-shadow:0 0 5px #00d4ff;}
+
+/* ALARM ITEMS */
+.alm-item{background:rgba(255,34,68,0.07);border:1px solid rgba(255,34,68,0.25);border-radius:2px;padding:3px 5px;margin-bottom:2px;font-size:9px;color:#ff4466;cursor:pointer;}
+.alm-item.ack{color:#1a4a6a;border-color:#0d2a45;background:transparent;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:#030810;}
+::-webkit-scrollbar-thumb{background:#0d2a45;}
+
+/* DATA ROWS */
+.drow{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(13,42,69,0.5);}
+.drow-lbl{font-size:9px;color:#2a5a7a;}
+.drow-val{font-family:'Share Tech Mono',monospace;font-size:11px;color:#00d4ff;}
+.drow-val.g{color:#00ff88;}
+.drow-val.w{color:#ffaa00;}
+.drow-val.r{color:#ff2244;}
+
+/* BOTTOM BAR */
+.bb-grp{display:flex;flex-direction:column;}
+.bb-lbl{font-size:8px;color:#1a4a6a;letter-spacing:1px;}
+.bb-val{font-size:11px;color:#00ff9d;}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-logo">BTM<span>SIM</span></div>
+  <div class="tb-title">Conning Display — Bridge Instruments</div>
+  <span class="led g"></span><span class="led-lbl">BRIDGE</span>
+  <span class="led g" id="led-eng"></span><span class="led-lbl">ENGINE</span>
+  <span class="led g" id="led-steer"></span><span class="led-lbl">STEERING</span>
+  <span class="led o" id="led-ap"></span><span class="led-lbl">AUTOPILOT</span>
+  <span class="led o" id="led-alm"></span><span class="led-lbl">ALARM</span>
+  <div class="tb-clock" id="clock">--:--:-- UTC</div>
+</div>
+
+<!-- LEFT COLUMN -->
+<div id="leftcol">
+
+  <!-- GYRO COMPASS -->
+  <div class="sec">Gyro Compass</div>
+  <div class="card">
+    <div class="digi-label">HEADING (GYRO)</div>
+    <div class="digi-lg" id="gyroHdg">011.0</div>
+    <div class="digi-label">MAGNETIC HEADING</div>
+    <div class="digi-md" id="magHdg">013.5</div>
+    <div class="digi-grid c2">
+      <div>
+        <div class="digi-label">SET COURSE</div>
+        <div class="digi-sm" id="setCourse">011.0</div>
+      </div>
+      <div>
+        <div class="digi-label">GYRO ERROR</div>
+        <div class="digi-sm" id="gyroErr">+0.5°E</div>
+      </div>
+    </div>
+    <div class="digi-grid c2">
+      <div>
+        <div class="digi-label">ROT (°/min)</div>
+        <div class="digi-sm" id="rotVal">+0.0</div>
+      </div>
+      <div>
+        <div class="digi-label">YAW (°)</div>
+        <div class="digi-sm" id="yawVal">0.0</div>
+      </div>
+    </div>
+    <!-- Gyro failure controls -->
+    <div class="tog-wrap">
+      <span class="tog-lbl">Gyro 1 Active</span>
+      <label class="tog"><input type="checkbox" id="gyro1" checked onchange="updateGyro()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="tog-wrap">
+      <span class="tog-lbl">Gyro 2 Active</span>
+      <label class="tog"><input type="checkbox" id="gyro2" onchange="updateGyro()"><span class="tog-sl"></span></label>
+    </div>
+  </div>
+
+  <!-- SPEED LOG -->
+  <div class="sec">Speed Log</div>
+  <div class="card">
+    <div class="digi-label">SPEED THROUGH WATER (LOG)</div>
+    <div class="digi-md" id="stwVal">00.0</div>
+    <div class="digi-label">SPEED OVER GROUND (GPS)</div>
+    <div class="digi-md" id="sogVal">00.0</div>
+    <div class="digi-grid c2">
+      <div>
+        <div class="digi-label">COG (°T)</div>
+        <div class="digi-sm" id="cogVal">011.0</div>
+      </div>
+      <div>
+        <div class="digi-label">DIST. RUN (NM)</div>
+        <div class="digi-sm" id="distRun">000.0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ECHO SOUNDER -->
+  <div class="sec">Echo Sounder</div>
+  <div class="card">
+    <div class="digi-label">DEPTH BELOW KEEL (m)</div>
+    <div class="digi-md" id="depthBK">012.0</div>
+    <div class="digi-label">DEPTH BELOW SURFACE (m)</div>
+    <div class="digi-md" id="depthBS">026.8</div>
+    <div class="digi-grid c2">
+      <div>
+        <div class="digi-label">DRAFT AFT (m)</div>
+        <div class="digi-sm" id="draftAft">14.8</div>
+      </div>
+      <div>
+        <div class="digi-label">UKC (m)</div>
+        <div class="digi-sm" id="ukcVal">12.0</div>
+      </div>
+    </div>
+    <div class="digi-label">SHALLOW ALARM (m)</div>
+    <input type="number" id="shallowAlarm" min="1" max="50" value="15" oninput="updateAlarms()">
+  </div>
+
+  <!-- POSITION -->
+  <div class="sec">GPS Position</div>
+  <div class="card">
+    <div class="digi-label">LATITUDE</div>
+    <div class="digi-sm" id="posLat">40° 58.283 N</div>
+    <div class="digi-label">LONGITUDE</div>
+    <div class="digi-sm" id="posLon">028° 59.871 E</div>
+    <div class="digi-grid c2">
+      <div>
+        <div class="digi-label">GPS HDOP</div>
+        <div class="digi-sm">0.9</div>
+      </div>
+      <div>
+        <div class="digi-label">SATELLITES</div>
+        <div class="digi-sm">12</div>
+      </div>
+    </div>
+    <div class="digi-label">CROSS TRACK ERROR (XTE)</div>
+    <div class="digi-md" id="xteVal">000.0</div>
+    <div class="digi-label" id="xteDir">ON TRACK</div>
+  </div>
+
+  <!-- ALARMS -->
+  <div class="sec">Active Alarms</div>
+  <div id="almList" style="max-height:120px;overflow-y:auto;"></div>
+  <button class="btn" onclick="ackAllAlarms()">ACK ALL ALARMS</button>
+
+</div>
+
+<!-- CENTER — 4 MAIN INSTRUMENTS -->
+<div id="center">
+
+  <!-- GYRO ROSE (top left) -->
+  <div class="inst-panel" id="gyroPanel">
+    <div class="inst-title">Gyro Compass Rose</div>
+    <canvas id="gyroCanvas"></canvas>
+    <div style="position:absolute;bottom:5px;left:0;right:0;text-align:center;">
+      <span style="font-family:'Share Tech Mono';font-size:10px;color:#2a6a8a;">HDG </span>
+      <span style="font-family:'Share Tech Mono';font-size:14px;color:#00ff9d;" id="gyroBottomHdg">011.0°</span>
+    </div>
+  </div>
+
+  <!-- ENGINE TELEGRAPH (top right) -->
+  <div class="inst-panel" id="telePanel">
+    <div class="inst-title">Engine Telegraph &amp; RPM</div>
+    <canvas id="teleCanvas"></canvas>
+  </div>
+
+  <!-- RUDDER ANGLE (bottom left) -->
+  <div class="inst-panel" id="rudderPanel">
+    <div class="inst-title">Rudder Angle Indicator</div>
+    <canvas id="rudderCanvas"></canvas>
+    <div style="position:absolute;bottom:5px;left:0;right:0;text-align:center;">
+      <span style="font-family:'Share Tech Mono';font-size:10px;color:#2a6a8a;">RUDDER </span>
+      <span style="font-family:'Share Tech Mono';font-size:14px;color:#00d4ff;" id="rudderBottom">0° MIDSHIPS</span>
+    </div>
+  </div>
+
+  <!-- AUTOPILOT (bottom right) -->
+  <div class="inst-panel" id="apPanel">
+    <div class="inst-title">Autopilot / Steering</div>
+    <canvas id="apCanvas"></canvas>
+  </div>
+
+</div>
+
+<!-- RIGHT COLUMN -->
+<div id="rightcol">
+
+  <!-- ENGINE TELEGRAPH CONTROL -->
+  <div class="sec">Engine Order Telegraph</div>
+  <div class="card">
+    <div class="digi-label">CURRENT ORDER</div>
+    <div class="digi-md" id="engOrder" style="font-size:13px;color:#ffaa00;">STOP</div>
+    <div class="digi-label">ENGINE RESPONSE</div>
+    <div class="digi-sm" id="engResponse">STOP</div>
+    <!-- Telegraph positions -->
+    <div id="teleButtons" style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">
+      <button class="btn grn" id="tb_fa" onclick="setTelegraph('FULL AHEAD',    105)">Full Ahead</button>
+      <button class="btn grn" id="tb_ha" onclick="setTelegraph('HALF AHEAD',     72)">Half Ahead</button>
+      <button class="btn grn" id="tb_sa" onclick="setTelegraph('SLOW AHEAD',     42)">Slow Ahead</button>
+      <button class="btn grn" id="tb_ds" onclick="setTelegraph('DEAD SLOW AHEAD',21)">Dead Slow Ahead</button>
+      <button class="btn amb on" id="tb_st" onclick="setTelegraph('STOP',          0)">STOP</button>
+      <button class="btn red" id="tb_da" onclick="setTelegraph('DEAD SLOW ASTERN',-21)">Dead Slow Astern</button>
+      <button class="btn red" id="tb_sa2" onclick="setTelegraph('SLOW ASTERN',   -42)">Slow Astern</button>
+      <button class="btn red" id="tb_ha2" onclick="setTelegraph('HALF ASTERN',   -72)">Half Astern</button>
+      <button class="btn red" id="tb_fa2" onclick="setTelegraph('FULL ASTERN',  -105)">Full Astern</button>
+    </div>
+    <div class="digi-grid c2" style="margin-top:4px;">
+      <div>
+        <div class="digi-label">STBD RPM</div>
+        <div class="digi-sm" id="stbdRpm">000</div>
+      </div>
+      <div>
+        <div class="digi-label">PORT RPM</div>
+        <div class="digi-sm" id="portRpm">000</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEERING / AUTOPILOT -->
+  <div class="sec">Autopilot / Steering</div>
+  <div class="card">
+    <div class="digi-label">STEERING MODE</div>
+    <div class="btn3">
+      <button class="btn" id="sm_hand" onclick="setSteerMode('HAND')">HAND</button>
+      <button class="btn on" id="sm_auto" onclick="setSteerMode('AUTO')">AUTO</button>
+      <button class="btn" id="sm_nfu" onclick="setSteerMode('NFU')">NFU</button>
+    </div>
+    <div class="digi-label">SET COURSE (AUTOPILOT)</div>
+    <input type="number" id="apCourse" min="0" max="359" value="11" oninput="updateAPCourse()">
+    <div class="digi-grid c2">
+      <div>
+        <div class="digi-label">PILOT WATCH</div>
+        <input type="number" id="pilotWatch" min="1" max="20" value="5" style="font-size:10px;">
+      </div>
+      <div>
+        <div class="digi-label">RUDDER LIMIT (°)</div>
+        <input type="number" id="rudderLimit" min="5" max="35" value="25">
+      </div>
+    </div>
+    <!-- Rudder control -->
+    <div class="digi-label">RUDDER ANGLE ORDER (°)</div>
+    <input type="range" id="rudderOrder" min="-35" max="35" value="0" oninput="setRudder(this.value)">
+    <div style="display:flex;justify-content:space-between;font-size:9px;color:#1a4a6a;margin-bottom:4px;">
+      <span>35° PORT</span><span>MIDSHIPS</span><span>35° STBD</span>
+    </div>
+    <div class="btn3">
+      <button class="btn red" onclick="setRudder(-35);document.getElementById('rudderOrder').value=-35">35P</button>
+      <button class="btn" onclick="setRudder(0);document.getElementById('rudderOrder').value=0">MDSHIP</button>
+      <button class="btn grn" onclick="setRudder(35);document.getElementById('rudderOrder').value=35">35S</button>
+    </div>
+  </div>
+
+  <!-- BOW THRUSTER -->
+  <div class="sec">Bow / Stern Thruster</div>
+  <div class="card">
+    <div class="tog-wrap">
+      <span class="tog-lbl">Bow Thruster</span>
+      <label class="tog"><input type="checkbox" id="bowThr" onchange="updateThrusters()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="digi-label">BOW THRUSTER POWER (%)</div>
+    <input type="range" id="bowThrPwr" min="-100" max="100" value="0" oninput="updateThrusters()">
+    <div class="digi-grid c2">
+      <div><div class="digi-label">PORT</div><div class="digi-sm" id="btPort">0%</div></div>
+      <div><div class="digi-label">STBD</div><div class="digi-sm" id="btStbd">0%</div></div>
+    </div>
+    <div class="tog-wrap">
+      <span class="tog-lbl">Stern Thruster</span>
+      <label class="tog"><input type="checkbox" id="sternThr" onchange="updateThrusters()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="digi-label">STERN THRUSTER POWER (%)</div>
+    <input type="range" id="sternThrPwr" min="-100" max="100" value="0" oninput="updateThrusters()">
+  </div>
+
+  <!-- SHIP PARTICULARS -->
+  <div class="sec">Ship Particulars</div>
+  <div class="card">
+    <div class="drow"><span class="drow-lbl">Ship Name</span><span class="drow-val g" id="spName">MV BOSPHORUS STAR</span></div>
+    <div class="drow"><span class="drow-lbl">LOA</span><span class="drow-val" id="spLOA">302.0 m</span></div>
+    <div class="drow"><span class="drow-lbl">Breadth</span><span class="drow-val" id="spBeam">48.2 m</span></div>
+    <div class="drow"><span class="drow-lbl">Draft Fwd</span><span class="drow-val" id="spDraftF">14.2 m</span></div>
+    <div class="drow"><span class="drow-lbl">Draft Aft</span><span class="drow-val" id="spDraftA">14.8 m</span></div>
+    <div class="drow"><span class="drow-lbl">Displacement</span><span class="drow-val" id="spDispl">85,000 T</span></div>
+    <div class="drow"><span class="drow-lbl">GRT</span><span class="drow-val" id="spGRT">54,000</span></div>
+    <div class="drow"><span class="drow-lbl">Max Speed</span><span class="drow-val" id="spMaxSpd">22.0 kts</span></div>
+    <div class="drow"><span class="drow-lbl">Bridge Height</span><span class="drow-val" id="spBridgeHt">35.0 m</span></div>
+    <div class="drow"><span class="drow-lbl">Loading</span><span class="drow-val" id="spLoad">LADEN FULL</span></div>
+    <div class="drow"><span class="drow-lbl">Flag</span><span class="drow-val">Turkey</span></div>
+  </div>
+
+  <!-- INERTIA / STOPPING TABLE -->
+  <div class="sec">Manoeuvring Data</div>
+  <div class="card">
+    <div style="font-size:9px;color:#1a4a6a;margin-bottom:3px;">ENGINE ORDER → STOPPING DISTANCE</div>
+    <div class="drow"><span class="drow-lbl">Full Ahead → Stop</span><span class="drow-val">3.2 NM / 18 min</span></div>
+    <div class="drow"><span class="drow-lbl">Half Ahead → Stop</span><span class="drow-val">1.8 NM / 11 min</span></div>
+    <div class="drow"><span class="drow-lbl">Full Ahead → Full Astern</span><span class="drow-val">1.1 NM / 8 min</span></div>
+    <div class="drow"><span class="drow-lbl">Transfer 90° turn</span><span class="drow-val">0.9 NM</span></div>
+    <div class="drow"><span class="drow-lbl">Tactical diameter</span><span class="drow-val">0.75 NM</span></div>
+    <div class="drow"><span class="drow-lbl">Advance Full turn</span><span class="drow-val">0.85 NM</span></div>
+    <div style="font-size:9px;color:#1a4a6a;margin-top:4px;margin-bottom:2px;">PARALLEL W/L (m)</div>
+    <div class="digi-grid c2">
+      <div><div class="digi-label">LOADED</div><div class="digi-sm">193.0</div></div>
+      <div><div class="digi-label">BALLAST</div><div class="digi-sm">0.0</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="botbar">
+  <div class="bb-grp"><div class="bb-lbl">HDG GYRO</div><div class="bb-val" id="bb-hdg">011.0°</div></div>
+  <div class="bb-grp"><div class="bb-lbl">STW</div><div class="bb-val" id="bb-stw">0.0 kts</div></div>
+  <div class="bb-grp"><div class="bb-lbl">SOG</div><div class="bb-val" id="bb-sog">0.0 kts</div></div>
+  <div class="bb-grp"><div class="bb-lbl">COG</div><div class="bb-val" id="bb-cog">011.0°</div></div>
+  <div class="bb-grp"><div class="bb-lbl">DEPTH</div><div class="bb-val" id="bb-dep">026.8 m</div></div>
+  <div class="bb-grp"><div class="bb-lbl">UKC</div><div class="bb-val" id="bb-ukc">12.0 m</div></div>
+  <div class="bb-grp"><div class="bb-lbl">RUDDER</div><div class="bb-val" id="bb-rud">0° MDSHIP</div></div>
+  <div class="bb-grp"><div class="bb-lbl">ENGINE</div><div class="bb-val" id="bb-eng">STOP</div></div>
+  <div class="bb-grp"><div class="bb-lbl">STEERING</div><div class="bb-val" id="bb-steer">AUTO</div></div>
+  <div class="bb-grp" style="margin-left:auto;"><div class="bb-lbl">SIM TIME</div><div class="bb-val" id="bb-sim">00:00:00</div></div>
+  <div class="bb-grp"><div class="bb-lbl">UTC</div><div class="bb-val" id="bb-utc">--:--:--</div></div>
+</div>
+
+</div><!-- end wrap -->
+
+<script>
+// =============================================
+// STATE
+// =============================================
+var ownHdg    = 11.0;
+var ownSog    = 0.0;
+var ownStw    = 0.0;
+var ownCog    = 11.0;
+var ownRot    = 0.0;
+var ownLat    = '40° 58.283 N';
+var ownLon    = '028° 59.871 E';
+var ownDepth  = 26.8;
+var ownDraft  = 14.8;
+var ownUKC    = 12.0;
+var rudderAct = 0;   // actual rudder angle
+var rudderOrd = 0;   // ordered rudder angle
+var engRPM    = 0;
+var engTarget = 0;
+var distRun   = 0.0;
+var xte       = 0.0;
+var steerMode = 'AUTO';
+var apCourse  = 11.0;
+var isPaused  = false;
+var simSecs   = 0;
+var alarms    = [];
+
+// Sim ship data (from Master A)
+var shipData = {
+  name:'MV BOSPHORUS STAR', loa:302, beam:48.2, draftF:14.2, draftA:14.8,
+  displ:85000, grt:54000, maxSpd:22, bridgeHt:35, loading:'LADEN FULL'
+};
+
+// =============================================
+// BROADCAST CHANNEL
+// =============================================
+try {
+  var bc = new BroadcastChannel('btm_sim');
+  bc.onmessage = function(e) {
+    var d = e.data;
+    if (!d) return;
+    if (d.type === 'STATE_UPDATE' && d.data) { applyState(d.data); }
+    if (d.type === 'SIM_TICK' && d.data)     { simSecs = d.data.simSeconds || simSecs; }
+    if (d.type === 'SIM_PAUSE'||d.type==='FREEZE')  { isPaused = true; }
+    if (d.type === 'SIM_RESUME'||d.type==='SIM_START'){ isPaused = false; }
+    if (d.type === 'SIM_STOP')  { isPaused = true; simSecs=0; }
+    if (d.type === 'EMERGENCY_STOP') { setTelegraph('STOP',0); }
+    if (d.type === 'INJECT')    { handleInject(d.data.inject); }
+    if (d.type === 'FAILURES' && d.data.failures) {
+      for (var i=0;i<d.data.failures.length;i++) { handleFailure(d.data.failures[i]); }
+    }
+    if (d.type === 'LOAD_SCENARIO' && d.data.scenario) { loadScenario(d.data.scenario); }
+  };
+  bc.postMessage({type:'STATION_PING', data:{station:'conning'}});
+} catch(e) {}
+
+function broadcastState() {
+  try {
+    bc.postMessage({
+      type:'CONNING_STATE',
+      data:{ hdg:ownHdg, sog:ownSog, cog:ownCog, rot:ownRot, rudder:rudderAct, rpm:engRPM, steerMode:steerMode }
+    });
+  } catch(e){}
+}
+
+function applyState(d) {
+  if (d.ownShip) {
+    shipData.name     = d.ownShip.name     || shipData.name;
+    shipData.loa      = d.ownShip.loa      || shipData.loa;
+    shipData.beam     = d.ownShip.beam     || shipData.beam;
+    shipData.draftA   = d.ownShip.draftAft || shipData.draftA;
+    shipData.draftF   = d.ownShip.draftFwd || shipData.draftF;
+    shipData.displ    = d.ownShip.displ    || shipData.displ;
+    shipData.grt      = d.ownShip.grt      || shipData.grt;
+    shipData.maxSpd   = d.ownShip.maxSpeed || shipData.maxSpd;
+    shipData.bridgeHt = d.ownShip.bridgeHt || shipData.bridgeHt;
+    shipData.loading  = (d.ownShip.loadCond||'laden_full').replace(/_/g,' ').toUpperCase();
+    updateShipParticulars();
+  }
+  if (d.position) {
+    ownHdg = d.position.hdg || ownHdg;
+    ownSog = d.position.sog || ownSog;
+    if (steerMode === 'AUTO') apCourse = ownHdg;
+  }
+  if (d.telegraph) { setTelegraphByName(d.telegraph); }
+  if (d.weather)   { updateWeatherEffects(d.weather); }
+}
+
+function handleInject(type) {
+  if (type==='me_fail')    { setTelegraph('STOP',0); addAlarm('MAIN ENGINE FAILURE'); document.getElementById('led-eng').className='led r'; }
+  if (type==='steer_fail') { addAlarm('STEERING GEAR FAILURE'); document.getElementById('led-steer').className='led r'; }
+  if (type==='mob')        { addAlarm('MAN OVERBOARD - IMMEDIATE ACTION'); }
+  if (type==='blackout')   { addAlarm('POWER BLACKOUT'); }
+}
+
+function handleFailure(f) {
+  if (f==='me')    handleInject('me_fail');
+  if (f==='steer') handleInject('steer_fail');
+  if (f==='gyro')  addAlarm('GYRO COMPASS FAILURE - SWITCH TO MAGNETIC');
+  if (f==='ap')    { setSteerMode('HAND'); addAlarm('AUTOPILOT FAILURE'); }
+}
+
+function loadScenario(sc) {
+  addAlarm('Scenario loaded: '+sc.name);
+}
+
+function updateWeatherEffects(w) {
+  // Wind and current affect XTE
+  if (w.currRate) { xte += (w.currRate * 0.01); }
+}
+
+// =============================================
+// CLOCK
+// =============================================
+function updateClock() {
+  var now = new Date();
+  var h=String(now.getUTCHours()).padStart(2,'0');
+  var m=String(now.getUTCMinutes()).padStart(2,'0');
+  var s=String(now.getUTCSeconds()).padStart(2,'0');
+  var ts = h+':'+m+':'+s+' UTC';
+  document.getElementById('clock').textContent    = ts;
+  document.getElementById('bb-utc').textContent   = h+':'+m+':'+s;
+}
+setInterval(updateClock,1000); updateClock();
+
+// =============================================
+// SIM TICK
+// =============================================
+function simTick() {
+  if (isPaused) return;
+  simSecs++;
+
+  // Gradually approach target RPM
+  if (engRPM < engTarget)       { engRPM = Math.min(engRPM + 2, engTarget); }
+  else if (engRPM > engTarget)  { engRPM = Math.max(engRPM - 2, engTarget); }
+
+  // Speed proportional to RPM (simplified ship model)
+  var maxRPM = 105;
+  var maxSpd = shipData.maxSpd || 22;
+  ownStw = (engRPM / maxRPM) * maxSpd;
+  if (ownStw < 0) ownStw = ownStw * 0.85; // astern slower
+
+  // SOG slightly different from STW (current effect)
+  ownSog = ownStw * 0.98;
+
+  // Heading changes based on rudder
+  if (steerMode === 'AUTO') {
+    var hdgDiff = apCourse - ownHdg;
+    if (hdgDiff > 180)  hdgDiff -= 360;
+    if (hdgDiff < -180) hdgDiff += 360;
+    rudderOrd = Math.max(-25, Math.min(25, hdgDiff * 2));
+  }
+
+  // Rudder moves toward ordered position
+  if (rudderAct < rudderOrd)      { rudderAct = Math.min(rudderAct + 1.5, rudderOrd); }
+  else if (rudderAct > rudderOrd) { rudderAct = Math.max(rudderAct - 1.5, rudderOrd); }
+
+  // ROT and heading change
+  ownRot = rudderAct * (ownSog / maxSpd) * 0.8;
+  ownHdg = ((ownHdg + ownRot / 60) + 360) % 360;
+  ownCog = (ownHdg + rudderAct * 0.05 + 360) % 360;
+
+  // Distance run
+  distRun += ownSog / 3600;
+
+  // XTE creep
+  xte += ownRot * 0.0001;
+
+  // Depth variation (simulate passage)
+  ownDepth = 26.8 + Math.sin(simSecs / 120) * 3;
+  ownUKC   = ownDepth - shipData.draftA;
+
+  updateAllDisplays();
+  updateAlarms();
+}
+setInterval(simTick, 1000);
+
+// =============================================
+// UPDATE ALL DISPLAYS
+// =============================================
+function updateAllDisplays() {
+  // Gyro
+  var hdgStr = ownHdg.toFixed(1);
+  document.getElementById('gyroHdg').textContent      = hdgStr;
+  document.getElementById('magHdg').textContent        = (ownHdg + 2.5).toFixed(1);
+  document.getElementById('rotVal').textContent        = (ownRot >= 0 ? '+' : '') + ownRot.toFixed(1);
+  document.getElementById('yawVal').textContent        = (rudderAct * 0.12).toFixed(1);
+  document.getElementById('gyroBottomHdg').textContent = hdgStr + '°';
+  document.getElementById('setCourse').textContent     = apCourse.toFixed(1);
+
+  // Speed
+  document.getElementById('stwVal').textContent = Math.abs(ownStw).toFixed(1);
+  document.getElementById('sogVal').textContent = Math.abs(ownSog).toFixed(1);
+  document.getElementById('cogVal').textContent = ownCog.toFixed(1);
+  document.getElementById('distRun').textContent= distRun.toFixed(1);
+
+  // Depth
+  document.getElementById('depthBS').textContent = ownDepth.toFixed(1);
+  document.getElementById('depthBK').textContent = (ownDepth - shipData.draftA).toFixed(1);
+  document.getElementById('draftAft').textContent= shipData.draftA.toFixed(1);
+  var ukcEl = document.getElementById('ukcVal');
+  ukcEl.textContent = ownUKC.toFixed(1);
+  ukcEl.className = 'digi-sm' + (ownUKC < 3 ? ' digi-danger' : ownUKC < 5 ? ' digi-warn' : '');
+
+  // XTE
+  var xteStr = Math.abs(xte).toFixed(2);
+  document.getElementById('xteVal').textContent = xteStr;
+  document.getElementById('xteDir').textContent = xte > 0.05 ? 'STBD OF TRACK' : xte < -0.05 ? 'PORT OF TRACK' : 'ON TRACK';
+
+  // RPM
+  var rpmStr = String(Math.abs(Math.round(engRPM))).padStart(3,'0');
+  document.getElementById('stbdRpm').textContent = rpmStr;
+  document.getElementById('portRpm').textContent = rpmStr;
+
+  // Bottom bar
+  document.getElementById('bb-hdg').textContent  = ownHdg.toFixed(1)+'°';
+  document.getElementById('bb-stw').textContent  = Math.abs(ownStw).toFixed(1)+' kts';
+  document.getElementById('bb-sog').textContent  = Math.abs(ownSog).toFixed(1)+' kts';
+  document.getElementById('bb-cog').textContent  = ownCog.toFixed(1)+'°';
+  document.getElementById('bb-dep').textContent  = ownDepth.toFixed(1)+' m';
+  document.getElementById('bb-ukc').textContent  = ownUKC.toFixed(1)+' m';
+  var rudStr = rudderAct >= 0 ? rudderAct.toFixed(0)+'° S' : Math.abs(rudderAct).toFixed(0)+'° P';
+  document.getElementById('bb-rud').textContent  = rudStr;
+  document.getElementById('bb-steer').textContent= steerMode;
+
+  // Sim time
+  var h=Math.floor(simSecs/3600), m=Math.floor((simSecs%3600)/60), s=simSecs%60;
+  var simStr = String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  document.getElementById('bb-sim').textContent = simStr;
+
+  // Side panel displays
+  document.getElementById('gyroHdg').textContent = ownHdg.toFixed(1);
+  document.getElementById('rotVal').textContent  = (ownRot>=0?'+':'')+ownRot.toFixed(1);
+
+  // Rudder bottom label
+  var rdLbl = (rudderAct === 0) ? '0° MIDSHIPS' : rudderAct > 0 ? rudderAct.toFixed(0)+'° STBD' : Math.abs(rudderAct).toFixed(0)+'° PORT';
+  document.getElementById('rudderBottom').textContent = rdLbl;
+
+  // Draw instruments
+  drawGyroRose();
+  drawTelegraph();
+  drawRudderIndicator();
+  drawAutopilot();
+}
+
+// =============================================
+// CANVAS SIZING
+// =============================================
+function sizeCanvas(id) {
+  var panel = document.getElementById(id+'Panel');
+  var canvas = document.getElementById(id+'Canvas');
+  var w = panel.clientWidth - 16;
+  var h = panel.clientHeight - 32;
+  var sz = Math.min(w, h);
+  canvas.width  = sz;
+  canvas.height = sz;
+  return sz;
+}
+
+function resizeAll() {
+  sizeCanvas('gyro');
+  sizeCanvas('tele');
+  sizeCanvas('rudder');
+  sizeCanvas('ap');
+  updateAllDisplays();
+}
+window.addEventListener('resize', resizeAll);
+
+// =============================================
+// GYRO COMPASS ROSE
+// =============================================
+function drawGyroRose() {
+  var canvas = document.getElementById('gyroCanvas');
+  var ctx    = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  if (w < 10 || h < 10) return;
+  var cx = w/2, cy = h/2, R = Math.min(cx,cy) - 4;
+
+  ctx.clearRect(0,0,w,h);
+
+  // Background circle
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+  ctx.fillStyle = '#010810'; ctx.fill();
+  ctx.strokeStyle = '#0d2a45'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Degree markings — rotate so heading is at top
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-ownHdg * Math.PI / 180);
+
+  for (var deg = 0; deg < 360; deg += 5) {
+    var rad = deg * Math.PI / 180;
+    var inner = (deg % 10 === 0) ? R * 0.78 : R * 0.85;
+    ctx.strokeStyle = (deg % 30 === 0) ? '#00d4ff' : '#0d4a6a';
+    ctx.lineWidth   = (deg % 10 === 0) ? 1.5 : 0.8;
+    ctx.beginPath();
+    ctx.moveTo(Math.sin(rad)*inner, -Math.cos(rad)*inner);
+    ctx.lineTo(Math.sin(rad)*R,     -Math.cos(rad)*R);
+    ctx.stroke();
+
+    // Cardinal and major labels
+    if (deg % 10 === 0) {
+      var lx = Math.sin(rad) * (R * 0.68);
+      var ly = -Math.cos(rad) * (R * 0.68);
+      ctx.save(); ctx.translate(lx, ly); ctx.rotate(rad);
+      ctx.fillStyle = (deg % 90 === 0) ? '#00ff9d' : '#4a8ab0';
+      ctx.font = (deg % 90 === 0) ? 'bold '+(R*0.1)+'px Rajdhani' : (R*0.07)+'px Share Tech Mono';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      var lbl = deg === 0 ? 'N' : deg === 90 ? 'E' : deg === 180 ? 'S' : deg === 270 ? 'W' : String(deg/10);
+      ctx.fillText(lbl, 0, 0);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+
+  // Fixed lubber line (heading pointer) — always at top
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - R * 0.88);
+  ctx.lineTo(cx, cy - R * 1.0);
+  ctx.stroke();
+
+  // Triangle pointer
+  ctx.fillStyle = '#ff4444';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - R * 0.88);
+  ctx.lineTo(cx - 5, cy - R * 0.78);
+  ctx.lineTo(cx + 5, cy - R * 0.78);
+  ctx.closePath();
+  ctx.fill();
+
+  // Set course marker (green)
+  var scRad = (apCourse - ownHdg) * Math.PI / 180;
+  ctx.strokeStyle = '#00ff88';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.sin(scRad)*R*0.5, cy - Math.cos(scRad)*R*0.5);
+  ctx.lineTo(cx + Math.sin(scRad)*R*0.96, cy - Math.cos(scRad)*R*0.96);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Centre dot
+  ctx.fillStyle = '#00d4ff';
+  ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fill();
+
+  // Heading digital display in centre
+  ctx.fillStyle = '#00ff9d';
+  ctx.font = 'bold '+(R*0.15)+'px Share Tech Mono';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(ownHdg.toFixed(1)+'°', cx, cy + R*0.22);
+}
+
+// =============================================
+// ENGINE TELEGRAPH
+// =============================================
+var teleOrders = [
+  {lbl:'FULL AHEAD',   rpm:105,  y:0.06, col:'#00ff88'},
+  {lbl:'HALF AHEAD',   rpm:72,   y:0.16, col:'#44ff88'},
+  {lbl:'SLOW AHEAD',   rpm:42,   y:0.26, col:'#88ffaa'},
+  {lbl:'D/S AHEAD',    rpm:21,   y:0.36, col:'#aaffbb'},
+  {lbl:'STOP',         rpm:0,    y:0.50, col:'#ffaa00'},
+  {lbl:'D/S ASTERN',   rpm:-21,  y:0.64, col:'#ffaaaa'},
+  {lbl:'SLOW ASTERN',  rpm:-42,  y:0.74, col:'#ff8888'},
+  {lbl:'HALF ASTERN',  rpm:-72,  y:0.84, col:'#ff4444'},
+  {lbl:'FULL ASTERN',  rpm:-105, y:0.94, col:'#ff2244'},
+];
+var currentTeleIdx = 4; // STOP
+
+function drawTelegraph() {
+  var canvas = document.getElementById('teleCanvas');
+  var ctx    = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  if (w < 10 || h < 10) return;
+  ctx.clearRect(0,0,w,h);
+
+  var bw = w * 0.42, bh = h * 0.96;
+  var ox = w * 0.04, oy = h * 0.02;
+
+  // ORDER side (left)
+  ctx.fillStyle = '#010810';
+  ctx.strokeStyle = '#0d2a45';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.rect(ox, oy, bw, bh); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#0d2a45';
+  ctx.font = '8px Rajdhani';
+  ctx.textAlign = 'center';
+  ctx.fillText('ORDER', ox+bw/2, oy+8);
+
+  // RESPONSE side (right)
+  var rx = w * 0.54;
+  ctx.fillStyle = '#010810';
+  ctx.beginPath(); ctx.rect(rx, oy, bw, bh); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#0d2a45';
+  ctx.fillText('RESP', rx+bw/2, oy+8);
+
+  teleOrders.forEach(function(o, idx) {
+    var py = oy + o.y * bh;
+    var isOrder = (idx === currentTeleIdx);
+    var isResp  = (Math.abs(engRPM - o.rpm) < 15);
+
+    // ORDER side mark
+    ctx.fillStyle = isOrder ? o.col : '#0d2a45';
+    ctx.fillRect(ox+4, py-8, bw-8, 16);
+    ctx.fillStyle = isOrder ? '#000' : '#2a5a7a';
+    ctx.font = 'bold '+(w*0.045)+'px Rajdhani';
+    ctx.textAlign = 'center';
+    ctx.fillText(o.lbl, ox+bw/2, py+4);
+
+    // RESPONSE side mark
+    ctx.fillStyle = isResp ? o.col : '#0d2a45';
+    ctx.fillRect(rx+4, py-8, bw-8, 16);
+    ctx.fillStyle = isResp ? '#000' : '#2a5a7a';
+    ctx.fillText(o.lbl, rx+bw/2, py+4);
+  });
+
+  // Pointer handle for order side
+  var ordY = oy + teleOrders[currentTeleIdx].y * bh;
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.moveTo(ox+bw+2,  ordY);
+  ctx.lineTo(ox+bw+12, ordY-6);
+  ctx.lineTo(ox+bw+12, ordY+6);
+  ctx.closePath();
+  ctx.fill();
+
+  // RPM bar
+  var barX = w * 0.47, barH = bh * 0.8, barW = 6;
+  var barY = oy + bh*0.1;
+  ctx.fillStyle = '#010810'; ctx.strokeStyle = '#0d2a45'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.rect(barX-barW/2, barY, barW, barH); ctx.fill(); ctx.stroke();
+  var pct = (engRPM + 105) / 210;
+  var fillH = barH * pct;
+  ctx.fillStyle = engRPM > 0 ? '#00ff88' : engRPM < 0 ? '#ff4444' : '#ffaa00';
+  ctx.fillRect(barX-barW/2, barY+barH-fillH, barW, fillH);
+}
+
+// =============================================
+// RUDDER ANGLE INDICATOR
+// =============================================
+function drawRudderIndicator() {
+  var canvas = document.getElementById('rudderCanvas');
+  var ctx    = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  if (w < 10 || h < 10) return;
+  ctx.clearRect(0,0,w,h);
+
+  var cx = w/2, cy = h*0.55, R = Math.min(cx, cy*0.85) - 6;
+
+  // Arc background
+  ctx.strokeStyle = '#0d2a45';
+  ctx.lineWidth = R*0.22;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, Math.PI*0.75, Math.PI*2.25);
+  ctx.stroke();
+
+  // Colour zones
+  var arcStart = Math.PI*0.75;
+  var arcEnd   = Math.PI*2.25;
+  var arcRange = arcEnd - arcStart;
+
+  // Port zone (red)
+  ctx.strokeStyle = 'rgba(255,34,68,0.25)';
+  ctx.lineWidth = R*0.22;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, arcStart, arcStart + arcRange*0.4);
+  ctx.stroke();
+
+  // Centre zone (green)
+  ctx.strokeStyle = 'rgba(0,255,136,0.15)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, arcStart + arcRange*0.4, arcStart + arcRange*0.6);
+  ctx.stroke();
+
+  // Stbd zone (green)
+  ctx.strokeStyle = 'rgba(0,212,255,0.2)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, arcStart + arcRange*0.6, arcEnd);
+  ctx.stroke();
+
+  // Scale markings
+  for (var a = -35; a <= 35; a += 5) {
+    var frac = (a + 35) / 70;
+    var ang  = arcStart + frac * arcRange;
+    var inner = R - R*0.12;
+    var outer = R + R*0.12;
+    ctx.strokeStyle = (a % 10 === 0) ? '#00d4ff' : '#0d4a6a';
+    ctx.lineWidth   = (a % 10 === 0) ? 1.5 : 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ang)*inner, cy + Math.sin(ang)*inner);
+    ctx.lineTo(cx + Math.cos(ang)*outer, cy + Math.sin(ang)*outer);
+    ctx.stroke();
+
+    if (a % 10 === 0) {
+      var lx = cx + Math.cos(ang) * (R - R*0.28);
+      var ly = cy + Math.sin(ang) * (R - R*0.28);
+      ctx.fillStyle = a === 0 ? '#00ff9d' : (a < 0 ? '#ff6688' : '#66aaff');
+      ctx.font = 'bold '+(R*0.1)+'px Share Tech Mono';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(Math.abs(a), lx, ly);
+    }
+  }
+
+  // Labels
+  ctx.fillStyle = '#ff4466'; ctx.font = 'bold '+(R*0.1)+'px Rajdhani'; ctx.textAlign='center';
+  ctx.fillText('PORT', cx - R*0.7, cy + R*0.5);
+  ctx.fillStyle = '#4488ff';
+  ctx.fillText('STBD', cx + R*0.7, cy + R*0.5);
+
+  // Actual rudder needle
+  var actFrac = (rudderAct + 35) / 70;
+  var actAng  = arcStart + actFrac * arcRange;
+  ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(actAng)*(R+R*0.14), cy + Math.sin(actAng)*(R+R*0.14));
+  ctx.stroke();
+  // Needle tip
+  ctx.fillStyle = '#00d4ff';
+  ctx.beginPath(); ctx.arc(cx+Math.cos(actAng)*(R+R*0.14), cy+Math.sin(actAng)*(R+R*0.14), 4, 0, Math.PI*2); ctx.fill();
+
+  // Ordered rudder needle (dashed)
+  var ordFrac = (rudderOrd + 35) / 70;
+  var ordAng  = arcStart + ordFrac * arcRange;
+  ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 2; ctx.setLineDash([5,3]);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ordAng)*R*0.7, cy + Math.sin(ordAng)*R*0.7);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // Centre pivot
+  ctx.fillStyle = '#1a4a6a';
+  ctx.beginPath(); ctx.arc(cx,cy,8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#00d4ff';
+  ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2); ctx.fill();
+
+  // Digital readout
+  var rdStr = rudderAct >= 0 ? rudderAct.toFixed(1)+'° S' : Math.abs(rudderAct).toFixed(1)+'° P';
+  ctx.fillStyle = '#00d4ff'; ctx.font='bold '+(R*0.18)+'px Share Tech Mono';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(rdStr, cx, cy - R*0.35);
+}
+
+// =============================================
+// AUTOPILOT DISPLAY
+// =============================================
+function drawAutopilot() {
+  var canvas = document.getElementById('apCanvas');
+  var ctx    = canvas.getContext('2d');
+  var w = canvas.width, h = canvas.height;
+  if (w < 10 || h < 10) return;
+  ctx.clearRect(0,0,w,h);
+
+  var pad = 10;
+  var fs  = Math.max(9, Math.floor(w * 0.055));
+
+  // Background
+  ctx.fillStyle = '#010810';
+  ctx.beginPath(); ctx.rect(pad,pad,w-pad*2,h-pad*2); ctx.fill();
+  ctx.strokeStyle = '#0d2a45'; ctx.lineWidth=1; ctx.stroke();
+
+  // Title
+  ctx.fillStyle = '#2a6a8a'; ctx.font='bold '+(fs*0.8)+'px Rajdhani';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('AUTOPILOT CONTROL UNIT', w/2, pad+6);
+
+  // Mode display
+  var modeColor = steerMode==='AUTO' ? '#00ff88' : steerMode==='NFU' ? '#ffaa00' : '#00d4ff';
+  ctx.fillStyle = '#020912';
+  ctx.beginPath(); ctx.rect(pad+8, pad+22, w-pad*2-16, h*0.18); ctx.fill();
+  ctx.strokeStyle = modeColor; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle = modeColor; ctx.font='bold '+(fs*1.4)+'px Rajdhani';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(steerMode, w/2, pad+22+h*0.09);
+
+  // Grid of readouts
+  var rows = [
+    {lbl:'SET COURSE',  val: apCourse.toFixed(1)+'°',    col:'#00ff9d'},
+    {lbl:'ACT HEADING', val: ownHdg.toFixed(1)+'°',      col:'#00d4ff'},
+    {lbl:'DEVIATION',   val: getDeviation(),              col: Math.abs(apCourse-ownHdg)>3?'#ffaa00':'#00ff88'},
+    {lbl:'ROT °/min',   val: (ownRot>=0?'+':'')+ownRot.toFixed(1), col:'#c8dff0'},
+    {lbl:'RUDDER ORD',  val: rudderOrd.toFixed(0)+'°',   col:'#ffaa00'},
+    {lbl:'RUDDER ACT',  val: rudderAct.toFixed(1)+'°',   col:'#00d4ff'},
+  ];
+
+  var rowy = pad + 22 + h*0.2;
+  var rowH = (h - rowy - pad - 8) / rows.length;
+  rows.forEach(function(r) {
+    ctx.fillStyle = '#1a4a6a'; ctx.font = (fs*0.75)+'px Share Tech Mono';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(r.lbl, pad+12, rowy + rowH*0.4);
+    ctx.fillStyle = r.col; ctx.font='bold '+(fs*0.95)+'px Share Tech Mono';
+    ctx.textAlign='right';
+    ctx.fillText(r.val, w-pad-12, rowy + rowH*0.6);
+    ctx.strokeStyle='rgba(13,42,69,0.5)'; ctx.lineWidth=0.5;
+    ctx.beginPath(); ctx.moveTo(pad+8,rowy+rowH); ctx.lineTo(w-pad-8,rowy+rowH); ctx.stroke();
+    rowy += rowH;
+  });
+
+  // Alarm indicators
+  var alarmActive = alarms.some(function(a){return !a.ack;});
+  ctx.fillStyle = alarmActive ? '#ff2244' : '#1a4a6a';
+  ctx.beginPath(); ctx.arc(w-pad-14, pad+14, 5, 0, Math.PI*2); ctx.fill();
+  if (alarmActive) ctx.fillStyle='rgba(255,34,68,0.2)'; else ctx.fillStyle='transparent';
+  ctx.font=(fs*0.7)+'px Share Tech Mono'; ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.fillStyle='#1a4a6a';
+  ctx.fillText('ALM', w-pad-20, pad+14);
+}
+
+function getDeviation() {
+  var diff = apCourse - ownHdg;
+  if (diff > 180) diff -= 360;
+  if (diff < -180) diff += 360;
+  return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '°';
+}
+
+// =============================================
+// TELEGRAPH CONTROL
+// =============================================
+function setTelegraph(name, rpm) {
+  engTarget = rpm;
+  // Find index
+  for (var i=0; i<teleOrders.length; i++) {
+    if (teleOrders[i].rpm === rpm) { currentTeleIdx = i; break; }
+  }
+  // Update buttons
+  var ids = ['tb_fa','tb_ha','tb_sa','tb_ds','tb_st','tb_da','tb_sa2','tb_ha2','tb_fa2'];
+  ids.forEach(function(id,idx) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('on');
+    if (idx === currentTeleIdx) el.classList.add('on');
+  });
+  document.getElementById('engOrder').textContent    = name;
+  document.getElementById('engResponse').textContent = name;
+  document.getElementById('bb-eng').textContent      = name;
+  broadcastState();
+}
+
+function setTelegraphByName(name) {
+  var nameMap = {
+    'FULL AHEAD':105,'HALF AHEAD':72,'SLOW AHEAD':42,'DEAD SLOW AHEAD':21,
+    'STOP':0,'DEAD SLOW ASTERN':-21,'SLOW ASTERN':-42,'HALF ASTERN':-72,'FULL ASTERN':-105
+  };
+  var rpm = nameMap[name];
+  if (rpm !== undefined) setTelegraph(name, rpm);
+}
+
+// =============================================
+// STEERING
+// =============================================
+function setSteerMode(mode) {
+  steerMode = mode;
+  ['sm_hand','sm_auto','sm_nfu'].forEach(function(id) {
+    document.getElementById(id).classList.remove('on');
+  });
+  var idMap = {HAND:'sm_hand',AUTO:'sm_auto',NFU:'sm_nfu'};
+  if (idMap[mode]) document.getElementById(idMap[mode]).classList.add('on');
+  document.getElementById('led-ap').className = (mode==='AUTO') ? 'led g' : 'led o';
+  document.getElementById('bb-steer').textContent = mode;
+  broadcastState();
+}
+
+function setRudder(val) {
+  rudderOrd = parseFloat(val);
+  var rdStr = rudderOrd >= 0 ? rudderOrd.toFixed(0)+'° STBD' : Math.abs(rudderOrd).toFixed(0)+'° PORT';
+  if (rudderOrd === 0) rdStr = '0° MIDSHIPS';
+  document.getElementById('bb-rud').textContent = rdStr;
+}
+
+function updateAPCourse() {
+  apCourse = parseFloat(document.getElementById('apCourse').value) || 0;
+  document.getElementById('setCourse').textContent = apCourse.toFixed(1);
+}
+
+// =============================================
+// THRUSTERS
+// =============================================
+function updateThrusters() {
+  var pwr = parseInt(document.getElementById('bowThrPwr').value);
+  var on  = document.getElementById('bowThr').checked;
+  if (!on) pwr = 0;
+  document.getElementById('btPort').textContent = pwr < 0 ? Math.abs(pwr)+'% PORT' : '0%';
+  document.getElementById('btStbd').textContent = pwr > 0 ? pwr+'% STBD' : '0%';
+}
+
+// =============================================
+// SHIP PARTICULARS
+// =============================================
+function updateShipParticulars() {
+  document.getElementById('spName').textContent    = shipData.name;
+  document.getElementById('spLOA').textContent     = shipData.loa.toFixed(1)+' m';
+  document.getElementById('spBeam').textContent    = shipData.beam.toFixed(1)+' m';
+  document.getElementById('spDraftF').textContent  = shipData.draftF.toFixed(1)+' m';
+  document.getElementById('spDraftA').textContent  = shipData.draftA.toFixed(1)+' m';
+  document.getElementById('spDispl').textContent   = shipData.displ.toLocaleString()+' T';
+  document.getElementById('spGRT').textContent     = shipData.grt.toLocaleString();
+  document.getElementById('spMaxSpd').textContent  = shipData.maxSpd.toFixed(1)+' kts';
+  document.getElementById('spBridgeHt').textContent= shipData.bridgeHt.toFixed(1)+' m';
+  document.getElementById('spLoad').textContent    = shipData.loading;
+}
+
+// =============================================
+// ALARMS
+// =============================================
+function addAlarm(msg) {
+  for (var i=0;i<alarms.length;i++) { if (alarms[i].msg===msg&&!alarms[i].ack) return; }
+  alarms.push({msg:msg,ack:false});
+  renderAlarms();
+  document.getElementById('led-alm').className='led r';
+}
+
+function renderAlarms() {
+  var list = document.getElementById('almList'); list.innerHTML='';
+  if (alarms.length===0) { list.innerHTML='<div class="alm-item ack" style="color:#1a4a6a;">No active alarms</div>'; return; }
+  var show = alarms.slice(-8).reverse();
+  for (var i=0;i<show.length;i++) {
+    var a=show[i], d=document.createElement('div');
+    d.className='alm-item'+(a.ack?' ack':'');
+    d.textContent=a.msg;
+    (function(al){d.onclick=function(){al.ack=true;renderAlarms();};})(a);
+    list.appendChild(d);
+  }
+}
+
+function ackAllAlarms() {
+  for (var i=0;i<alarms.length;i++) alarms[i].ack=true;
+  renderAlarms();
+  document.getElementById('led-alm').className='led o';
+}
+
+function updateAlarms() {
+  var shallow = parseFloat(document.getElementById('shallowAlarm').value)||15;
+  if (ownDepth < shallow) addAlarm('SHALLOW WATER WARNING: '+ownDepth.toFixed(1)+'m');
+  if (ownUKC < 2)  addAlarm('CRITICAL UKC: '+ownUKC.toFixed(1)+'m');
+  if (ownUKC < 5 && ownUKC >= 2) addAlarm('LOW UKC WARNING: '+ownUKC.toFixed(1)+'m');
+  if (Math.abs(xte) > 0.1) addAlarm('XTE EXCEEDED: '+Math.abs(xte).toFixed(2)+'NM');
+  if (Math.abs(ownRot) > 10) addAlarm('HIGH ROT: '+ownRot.toFixed(1)+'°/min');
+}
+
+function updateGyro() {
+  var g1 = document.getElementById('gyro1').checked;
+  var g2 = document.getElementById('gyro2').checked;
+  if (!g1 && !g2) addAlarm('ALL GYROS FAILED - SWITCH TO MAGNETIC');
+  else if (!g1)   addAlarm('GYRO 1 FAILED');
+  else if (!g2)   addAlarm('GYRO 2 FAILED');
+}
+
+// =============================================
+// INIT
+// =============================================
+renderAlarms();
+updateShipParticulars();
+setTelegraph('STOP', 0);
+setSteerMode('AUTO');
+
+// Wait for DOM layout then size canvases
+setTimeout(function() {
+  resizeAll();
+  // Start broadcast ping
+  setInterval(function() {
+    try { bc.postMessage({type:'STATION_PING',data:{station:'conning'}}); } catch(e){}
+  }, 5000);
+}, 200);
+</script>
+<div style="position:fixed;bottom:8px;left:12px;z-index:9999;pointer-events:none;"><span style="font-family:Georgia,serif;font-size:15px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 8px rgba(255,215,0,0.5);">CASY SIMULATIONS</span></div>
+</body>
+</html>

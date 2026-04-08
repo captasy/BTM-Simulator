@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASY Simulations — BTM Bridge Simulator User Guide</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&family=Exo+2:wght@300;400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#060c14;color:#c8dff0;font-family:'Exo 2',sans-serif;font-size:14px;line-height:1.7;}
+
+/* HEADER */
+#header{background:linear-gradient(180deg,#030810 0%,#060c14 100%);border-bottom:2px solid #0d2a45;padding:24px 40px;display:flex;align-items:center;justify-content:space-between;}
+.logo{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;color:#ffd700;letter-spacing:4px;text-shadow:0 0 20px rgba(255,215,0,0.4);}
+.logo span{color:#00d4ff;}
+.subtitle{font-family:'Rajdhani',sans-serif;font-size:14px;letter-spacing:3px;color:#3a7a9a;text-transform:uppercase;margin-top:4px;}
+.version{font-family:'Share Tech Mono';font-size:11px;color:#1a4a6a;margin-top:6px;}
+
+/* NAV */
+#nav{background:#030810;border-bottom:1px solid #0d2a45;padding:10px 40px;display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
+.nav-btn{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border:1px solid #0d2a45;background:#07111e;color:#3a7a9a;cursor:pointer;border-radius:3px;text-decoration:none;display:inline-block;transition:all .15s;}
+.nav-btn:hover{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,0.08);}
+
+/* MAIN */
+#main{max-width:1100px;margin:0 auto;padding:30px 40px 60px;}
+
+/* SECTIONS */
+.section{margin-bottom:48px;}
+.sec-hdr{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:2px;color:#00d4ff;border-left:4px solid #00d4ff;padding-left:14px;margin-bottom:18px;text-transform:uppercase;}
+.sec-sub{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;letter-spacing:1px;color:#00ff9d;margin:20px 0 10px;text-transform:uppercase;}
+
+/* STEPS */
+.step{display:flex;gap:16px;margin-bottom:18px;align-items:flex-start;}
+.step-num{background:rgba(0,212,255,0.15);border:1px solid #00d4ff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#00d4ff;flex-shrink:0;margin-top:2px;}
+.step-body{flex:1;}
+.step-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#c8dff0;margin-bottom:4px;}
+.step-desc{color:#7ab3d4;font-size:13px;line-height:1.6;}
+
+/* CODE BLOCK */
+.code{background:#020912;border:1px solid #0d2a45;border-radius:3px;padding:10px 14px;font-family:'Share Tech Mono',monospace;font-size:12px;color:#00ff9d;margin:8px 0;overflow-x:auto;border-left:3px solid #00d4ff;}
+
+/* CARDS */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:16px;}
+.mod-card{background:#07111e;border:1px solid #0d2a45;border-radius:4px;padding:14px;transition:border-color .2s;}
+.mod-card:hover{border-color:#00d4ff;}
+.mc-num{font-family:'Share Tech Mono';font-size:10px;color:#1a4a6a;margin-bottom:4px;}
+.mc-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:#00ff9d;margin-bottom:6px;}
+.mc-desc{font-size:12px;color:#4a8ab0;line-height:1.5;}
+.mc-file{font-family:'Share Tech Mono';font-size:10px;color:#1a4a6a;margin-top:8px;border-top:1px solid #0d2a45;padding-top:6px;}
+
+/* TIPS */
+.tip{background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.2);border-radius:3px;padding:10px 14px;margin:10px 0;font-size:13px;color:#4a8ab0;}
+.tip::before{content:'💡 ';color:#00ff9d;}
+.warn{background:rgba(255,170,0,0.05);border:1px solid rgba(255,170,0,0.2);border-radius:3px;padding:10px 14px;margin:10px 0;font-size:13px;color:#7a6a3a;}
+.warn::before{content:'⚠ ';color:#ffaa00;}
+.danger{background:rgba(255,34,68,0.05);border:1px solid rgba(255,34,68,0.2);border-radius:3px;padding:10px 14px;margin:10px 0;font-size:13px;color:#7a3a44;}
+.danger::before{content:'🚫 ';color:#ff4466;}
+
+/* KEYBOARD TABLE */
+table{width:100%;border-collapse:collapse;margin:10px 0;}
+th{background:#07111e;color:#00d4ff;font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1px;padding:8px 12px;border:1px solid #0d2a45;text-align:left;text-transform:uppercase;}
+td{padding:7px 12px;border:1px solid #0d2a45;font-size:12px;color:#7ab3d4;vertical-align:top;}
+td:first-child{font-family:'Share Tech Mono';color:#00ff9d;white-space:nowrap;}
+tr:hover td{background:rgba(0,212,255,0.04);}
+
+/* FLOW DIAGRAM */
+.flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin:14px 0;}
+.flow-box{background:#07111e;border:1px solid #0d2a45;border-radius:3px;padding:8px 14px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:#00d4ff;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+.flow-arrow{color:#1a4a6a;font-size:18px;padding:0 6px;}
+
+/* BADGE */
+.badge{display:inline-block;font-family:'Share Tech Mono';font-size:10px;padding:2px 8px;border-radius:2px;margin-left:6px;vertical-align:middle;}
+.badge-grn{background:rgba(0,255,136,0.12);border:1px solid #00ff88;color:#00ff88;}
+.badge-blu{background:rgba(0,212,255,0.12);border:1px solid #00d4ff;color:#00d4ff;}
+.badge-amb{background:rgba(255,170,0,0.12);border:1px solid #ffaa00;color:#ffaa00;}
+.badge-red{background:rgba(255,68,102,0.12);border:1px solid #ff4466;color:#ff4466;}
+
+/* QUICK REF */
+.qref{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:10px 0;}
+.qr-item{display:flex;gap:8px;padding:5px 8px;background:#07111e;border:1px solid #0d2a45;border-radius:2px;font-size:12px;}
+.qr-key{font-family:'Share Tech Mono';color:#00ff9d;min-width:80px;flex-shrink:0;}
+.qr-val{color:#4a8ab0;}
+
+/* FOOTER */
+#footer{background:#030810;border-top:1px solid #0d2a45;padding:20px 40px;text-align:center;}
+.footer-logo{font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:#ffd700;letter-spacing:4px;text-shadow:0 0 12px rgba(255,215,0,0.4);}
+.footer-sub{font-size:11px;color:#1a4a6a;margin-top:6px;font-family:'Share Tech Mono';}
+
+hr.divider{border:none;border-top:1px solid #0d2a45;margin:30px 0;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div>
+    <div class="logo">CASY <span>SIMULATIONS</span></div>
+    <div class="subtitle">BTM Bridge Simulator — Complete User Guide</div>
+    <div class="version">Version 2.0 | All 6 Modules | Bosphorus Strait Exercise Area</div>
+  </div>
+  <div style="text-align:right;font-family:'Share Tech Mono';font-size:11px;color:#1a4a6a;">
+    <div style="color:#00ff9d;font-size:14px;">6 Modules</div>
+    <div>100% Browser-Based</div>
+    <div>No Installation</div>
+    <div>Chrome Required</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div id="nav">
+  <a class="nav-btn" href="#setup">Setup</a>
+  <a class="nav-btn" href="#modules">Modules</a>
+  <a class="nav-btn" href="#master-a">Master A</a>
+  <a class="nav-btn" href="#master-b">Master B</a>
+  <a class="nav-btn" href="#radar">Radar</a>
+  <a class="nav-btn" href="#conning">Conning</a>
+  <a class="nav-btn" href="#ecdis">ECDIS</a>
+  <a class="nav-btn" href="#visual">3D Visual</a>
+  <a class="nav-btn" href="#exercise">Run Exercise</a>
+  <a class="nav-btn" href="#shortcuts">Shortcuts</a>
+  <a class="nav-btn" href="#troubleshoot">Troubleshoot</a>
+</div>
+
+<div id="main">
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="setup">
+<div class="sec-hdr">Step 1 — Initial Setup</div>
+
+<div class="sec-sub">A. Download All 6 Files</div>
+<p style="color:#4a8ab0;margin-bottom:12px;">Download all 6 HTML files from your Claude conversation. They are the entire simulator — no other software needed.</p>
+
+<div class="card-grid">
+  <div class="mod-card">
+    <div class="mc-num">FILE 01</div>
+    <div class="mc-title">Master Station A</div>
+    <div class="mc-desc">Ship setup, targets, weather, route planning</div>
+    <div class="mc-file">BTM_Master_A_Ship_Setup.html</div>
+  </div>
+  <div class="mod-card">
+    <div class="mc-num">FILE 02</div>
+    <div class="mc-title">Master Station B</div>
+    <div class="mc-desc">Simulator commander, start/stop, scenarios</div>
+    <div class="mc-file">BTM_Master_B_Commander.html</div>
+  </div>
+  <div class="mod-card">
+    <div class="mc-num">FILE 03</div>
+    <div class="mc-title">Radar X-Band ARPA</div>
+    <div class="mc-desc">Full marine radar with ARPA, EBL, VRM</div>
+    <div class="mc-file">BTM_Radar_XBand_ARPA.html</div>
+  </div>
+  <div class="mod-card">
+    <div class="mc-num">FILE 04</div>
+    <div class="mc-title">Conning Display</div>
+    <div class="mc-desc">Telegraph, autopilot, rudder, gyro compass</div>
+    <div class="mc-file">BTM_Conning_Display.html</div>
+  </div>
+  <div class="mod-card">
+    <div class="mc-num">FILE 05</div>
+    <div class="mc-title">ECDIS</div>
+    <div class="mc-desc">Electronic chart, route planning, AIS</div>
+    <div class="mc-file">BTM_ECDIS.html</div>
+  </div>
+  <div class="mod-card">
+    <div class="mc-num">FILE 06</div>
+    <div class="mc-title">3D Visual Bridge</div>
+    <div class="mc-desc">Three.js 3D scene, bow view, weather effects</div>
+    <div class="mc-file">BTM_3D_Visual.html</div>
+  </div>
+</div>
+
+<div class="sec-sub">B. Create Your Simulator Folder</div>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Create a folder on your Desktop</div>
+    <div class="step-desc">Right-click on Desktop → New → Folder → Name it <strong style="color:#00ff9d">BTM_Simulator</strong></div>
+    <div class="code">C:\Users\YourName\Desktop\BTM_Simulator\</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Move ALL 6 HTML files into that folder</div>
+    <div class="step-desc">All files must be in the <strong style="color:#ffaa00">SAME folder</strong>. This is critical — if they are in different folders they cannot communicate with each other.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Verify Chrome is installed and up to date</div>
+    <div class="step-desc">Only Google Chrome is supported. Edge, Firefox, and Safari do NOT support all features.</div>
+    <div class="code">chrome://settings/help  ← type this in Chrome to check for updates</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Enable Hardware Acceleration in Chrome</div>
+    <div class="step-desc">This is required for the 3D Visual module (Three.js).</div>
+    <div class="code">chrome://settings/system  ← type this in Chrome, turn ON "Use hardware acceleration"</div>
+  </div>
+</div>
+
+<div class="sec-sub">C. Open the Simulator — Correct Method</div>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Open Chrome browser</div>
+    <div class="step-desc">Do not use any other browser.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Open 6 tabs — one for each module</div>
+    <div class="step-desc">Press <strong style="color:#00ff9d">Ctrl + T</strong> to open a new tab. Then drag each HTML file from your folder into the Chrome address bar. Do this 6 times for all 6 files.</div>
+    <div class="code">Tab 1: BTM_Master_A_Ship_Setup.html  ← INSTRUCTOR screen
+Tab 2: BTM_Master_B_Commander.html  ← INSTRUCTOR screen
+Tab 3: BTM_Radar_XBand_ARPA.html    ← STUDENT screen
+Tab 4: BTM_Conning_Display.html     ← STUDENT screen
+Tab 5: BTM_ECDIS.html               ← STUDENT screen
+Tab 6: BTM_3D_Visual.html           ← STUDENT screen</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Hard-refresh each tab</div>
+    <div class="step-desc">Click each tab and press <strong style="color:#00ff9d">Ctrl + Shift + R</strong> to ensure the latest version loads.</div>
+  </div>
+</div>
+
+<div class="tip">For classroom teaching with multiple screens, open different tabs in full-screen mode (F11) on each monitor. Use Windows + Tab or Alt + Tab to switch between screens.</div>
+<div class="warn">NEVER open the files by double-clicking from Windows Explorer on some computers. Always drag into Chrome's address bar.</div>
+
+</div><!-- end setup section -->
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="modules">
+<div class="sec-hdr">Step 2 — Understanding the Layout</div>
+
+<p style="color:#4a8ab0;margin-bottom:16px;">The simulator works exactly like a real ship's bridge. The <strong style="color:#00ff9d">Instructor</strong> sits at the Master Stations and controls the exercise. The <strong style="color:#00d4ff">Students</strong> operate the slave displays.</p>
+
+<div class="flow">
+  <div class="flow-box" style="border-color:#ffd700;color:#ffd700;">INSTRUCTOR<br>Master A + B</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box" style="border-color:#00d4ff;color:#00d4ff;">BroadcastChannel<br>(automatic sync)</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box" style="border-color:#00ff9d;color:#00ff9d;">STUDENTS<br>Radar + Conning + ECDIS + 3D</div>
+</div>
+
+<p style="color:#4a8ab0;margin:12px 0;">When you change anything on Master A — ship type, weather, speed, targets — it <strong style="color:#00ff9d">automatically updates</strong> on all other open tabs instantly. No button pressing needed.</p>
+
+<div class="warn">All 6 tabs must be open in the SAME Chrome browser window from the SAME folder for the automatic sync to work.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="master-a">
+<div class="sec-hdr">Step 3 — Master Station A (Ship Setup)</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">This is the <strong style="color:#ffd700">Instructor's main setup screen</strong>. Configure everything here before starting the exercise.</p>
+
+<div class="sec-sub">Left Panel — Own Ship</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Select Vessel Type</div>
+    <div class="step-desc">Click the <strong style="color:#00ff9d">SELECT VESSEL</strong> dropdown at the top of the left panel. Choose from 14 vessel types: Container Ship, VLCC Tanker, LNG Carrier, Bulk Carrier, Cruise, Ferry, Tug, Naval, Yacht, etc. All ship particulars (LOA, beam, draft, displacement, engine power, max speed) auto-fill automatically.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Set Ship Name, IMO, Call Sign</div>
+    <div class="step-desc">Type the vessel name in the <strong>VESSEL NAME</strong> field. This appears on ECDIS and AIS displays.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Set Loading Condition</div>
+    <div class="step-desc">In the <strong>Cargo &amp; Loading</strong> card, select: Laden Full / Laden Partial / Ballast Normal / Light Ship. This affects draft and UKC calculations.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Set Initial Position &amp; Heading</div>
+    <div class="step-desc">In the centre panel, enter the starting latitude, longitude, heading, and SOG. Default is Bosphorus Strait entrance. You can type any position in degrees/minutes format.</div>
+  </div>
+</div>
+
+<div class="sec-sub">Centre Tabs — Route, Weather, Failures</div>
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <div class="step-title">Load a Route (Route &amp; Waypoints tab)</div>
+    <div class="step-desc">Click the <strong>ROUTE &amp; WAYPOINTS</strong> tab. Click the preset dropdown and select a route — Bosphorus Northbound, Dover Strait, Singapore, etc. Waypoints auto-load. You can also add custom waypoints by clicking <strong>+ ADD WPT</strong>.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <div class="step-title">Set Weather &amp; Environment</div>
+    <div class="step-desc">Click the <strong>WEATHER &amp; ENVIRONMENT</strong> tab. Adjust:
+      <br>• <strong style="color:#00ff9d">Beaufort Scale</strong> — select 0-12, wind speed auto-sets
+      <br>• <strong style="color:#00ff9d">Wave Height &amp; Period</strong> — affects 3D visual rolling
+      <br>• <strong style="color:#00ff9d">Current Rate &amp; Direction</strong> — affects ECDIS drift
+      <br>• <strong style="color:#00ff9d">Visibility</strong> — affects 3D fog and radar
+      <br>• <strong style="color:#00ff9d">Time of Day</strong> — Dawn/Day/Dusk/Night lighting
+      <br>• <strong style="color:#00ff9d">Fog toggle</strong> — instantly sets visibility to 200m</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <div class="step-title">Set Up Equipment Failures (Failures tab)</div>
+    <div class="step-desc">Click the <strong>FAILURES &amp; HAZARDS</strong> tab. Check any boxes to pre-arm failures: Gyro failure, GPS failure, Radar failure, Main Engine failure, Steering failure, Power Blackout, Fire, Flooding, MOB. Click <strong>TRIGGER SELECTED FAILURES</strong> at any point during the exercise to inject them.</div>
+  </div>
+</div>
+
+<div class="sec-sub">Right Panel — Target Ships</div>
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <div class="step-title">Add Target Ships</div>
+    <div class="step-desc">In the right panel under <strong>ADD TARGET</strong>:
+      <br>1. Select vessel type (Tanker, Container, Bulk, Ferry, Fishing, Naval, Tug, etc.)
+      <br>2. Set Bearing from own ship (0-359°)
+      <br>3. Set Range in NM (e.g. 6.0)
+      <br>4. Set Target Course (0-359°)
+      <br>5. Set Target Speed in knots
+      <br>6. Click <strong style="color:#00d4ff">+ ADD TARGET</strong>
+      <br>Repeat for up to 20 targets. All appear on Radar and ECDIS instantly.</div>
+  </div>
+</div>
+
+<div class="sec-sub">Engine Telegraph</div>
+<div class="step">
+  <div class="step-num">9</div>
+  <div class="step-body">
+    <div class="step-title">Set Engine Order</div>
+    <div class="step-desc">The telegraph is in the right panel. Click any position: FULL AHEAD → HALF AHEAD → SLOW AHEAD → DEAD SLOW AHEAD → STOP → DEAD SLOW ASTERN → SLOW ASTERN → HALF ASTERN → FULL ASTERN. The Conning Display updates instantly showing RPM change.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">10</div>
+  <div class="step-body">
+    <div class="step-title">Apply All Settings</div>
+    <div class="step-desc">Click the green <strong style="color:#00ff9d">▶ APPLY ALL</strong> button at the top of the centre panel. This broadcasts everything to all slave stations.</div>
+  </div>
+</div>
+
+<div class="tip">The live digital displays (SOG, COG, HDG, Depth, UKC) at the top of the centre panel update every second automatically. Watch UKC — it turns amber below 5m and red below 3m.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="master-b">
+<div class="sec-hdr">Step 4 — Master Station B (Simulator Commander)</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">This is the <strong style="color:#ffd700">Exercise Control Panel</strong>. Start, stop, pause and record exercises from here.</p>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Load a Scenario</div>
+    <div class="step-desc">In the <strong>Scenario Library</strong> (left panel), browse 15 built-in exercises. Filter by area (Bosphorus, Dover Strait, Singapore, etc.) or difficulty (Easy/Medium/Hard). Click a scenario to select it. The right panel shows description and duration.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Add Trainees</div>
+    <div class="step-desc">In the right panel under <strong>Student Groups</strong>, type each student's name and click <strong>+ Add Trainee</strong>. Their names appear in the assessment report.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Launch All Stations</div>
+    <div class="step-desc">Click <strong style="color:#00ff9d">▶ LAUNCH ALL</strong> in the Station Status panel. This sends a signal to all open tabs. Their LEDs turn green one by one as they respond.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Start the Exercise</div>
+    <div class="step-desc">Click the large green <strong style="color:#00ff9d">▶ START</strong> button in the centre. The simulation clock starts counting. All stations receive the start signal and begin updating.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <div class="step-title">Control Simulation Speed</div>
+    <div class="step-desc">Use the <strong>SPEED</strong> slider to run at ×0.25 (slow motion), ×1 (real time), ×2, ×4, or ×8 (fast forward). Useful for fast-forwarding through long transits.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <div class="step-title">Inject Emergency Scenarios</div>
+    <div class="step-desc">The <strong>Quick Inject</strong> panel on the right lets you inject situations mid-exercise with one click:
+      <br>• 🌫 FOG — drops visibility to 200m instantly
+      <br>• ⛈ STORM — Beaufort 9 with heavy seas
+      <br>• ⚙ MAIN ENGINE FAIL — engine stops
+      <br>• 🛞 STEERING GEAR FAIL — rudder jams
+      <br>• 👤 MAN OVERBOARD — MOB alarm on all stations
+      <br>• 💡 POWER BLACKOUT — all systems alarm</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <div class="step-title">Pause / Resume</div>
+    <div class="step-desc">Click <strong style="color:#ffaa00">⏸ PAUSE</strong> to freeze all stations for discussion. Click <strong style="color:#00d4ff">▶▶ RESUME</strong> to continue. Use <strong>⚡ FREEZE</strong> for instant pause without confirmation.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <div class="step-title">Record &amp; Debrief</div>
+    <div class="step-desc">Click <strong style="color:#ff4466">⏺ START RECORDING</strong> before the exercise. After stopping, click <strong>💾 SAVE</strong>. Then click <strong>📊 EXPORT DEBRIEF</strong> to download an HTML report with scores, event log, and timestamps — ready to print or email to students.</div>
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="radar">
+<div class="sec-hdr">Step 5 — Marine Radar X-Band ARPA</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">Full professional radar display. Operates like a real JRC/Furuno/Kongsberg ARPA radar.</p>
+
+<div class="sec-sub">Basic Operation</div>
+<table>
+  <tr><th>Control</th><th>What it does</th><th>How to use</th></tr>
+  <tr><td>STBY / XMIT</td><td>Standby or Transmitting</td><td>Click XMIT to activate. Click STBY to stop transmitting. Sweep stops on STBY.</td></tr>
+  <tr><td>Range Buttons</td><td>Changes radar range scale</td><td>Click 0.75 / 1.5 / 3 / 6 / 12 / 24 / 48 / 96. Rings rescale automatically.</td></tr>
+  <tr><td>N UP / H UP / C UP</td><td>Orientation mode</td><td>N UP = North at top (recommended). H UP = ship's head at top. C UP = course at top.</td></tr>
+  <tr><td>TM / RM</td><td>True or Relative Motion</td><td>RM = own ship at centre (default). TM = own ship moves across screen.</td></tr>
+  <tr><td>SHORT / LONG</td><td>Pulse length</td><td>Short pulse for close range, long pulse for long range.</td></tr>
+  <tr><td>GAIN</td><td>Receiver sensitivity</td><td>Slide right to increase. Too high = clutter. Too low = missed targets.</td></tr>
+  <tr><td>SEA CLT</td><td>Sea clutter suppression</td><td>Increase to remove sea return near own ship. Don't suppress too much.</td></tr>
+  <tr><td>RAIN CLT</td><td>Rain clutter suppression</td><td>Increase in precipitation to see through rain echoes.</td></tr>
+  <tr><td>BRILLNCE</td><td>Display brightness</td><td>Adjust for ambient light conditions.</td></tr>
+</table>
+
+<div class="sec-sub">Acquiring Targets (ARPA)</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Manual Acquisition — Click on Echo</div>
+    <div class="step-desc">Move your mouse over any echo on the radar screen and <strong>left-click</strong> it. A triangle ARPA symbol appears. The target data panel opens on the right showing BRG, RNG, CPA, TCPA, BCR, BCT, name and MMSI.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Automatic Acquisition</div>
+    <div class="step-desc">Click <strong>AUTO ACQ</strong> in the ARPA panel. All targets within radar range are automatically acquired. Use with caution — it acquires everything including buoys and land.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Read CPA / TCPA</div>
+    <div class="step-desc">After acquiring a target, check the target list on the right panel. CPA values show in green (safe), amber (caution), or red (alarm). When CPA is below the CPA LIMIT and TCPA is below TCPA LIMIT, an alarm triggers automatically.</div>
+  </div>
+</div>
+
+<div class="sec-sub">EBL and VRM</div>
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Using Electronic Bearing Line (EBL)</div>
+    <div class="step-desc">Click <strong>EBL1 OFF</strong> to activate EBL1 (amber dashed line from centre). Type bearing in the EBL1 input box (e.g. 045 for 045°T). The line extends to the edge of the screen. Use to measure bearing to a target or landmark.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <div class="step-title">Using Variable Range Marker (VRM)</div>
+    <div class="step-desc">Click <strong>VRM1 OFF</strong> to activate VRM1 (amber dashed circle). Type range in NM in the VRM1 input. The circle shows that range. Use to measure distance to a target or plan CPA.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <div class="step-title">Guard Zone</div>
+    <div class="step-desc">Set INNER and OUTER range in the Guard Zone card. Click <strong>GUARD OFF</strong> to activate. Any target entering the zone triggers an alarm.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <div class="step-title">Trial Manoeuvre</div>
+    <div class="step-desc">Click <strong>T-SIM OFF</strong> to activate trial manoeuvre. Enter a trial COG and SOG. A dashed cyan vector shows where own ship would go. Check if this avoids all CPA alarms before executing.</div>
+  </div>
+</div>
+
+<div class="tip">Hover the mouse over the radar screen to see cursor BRG and RNG in the bottom bar. This is how you measure bearing and range to any point on screen without acquiring it.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="conning">
+<div class="sec-hdr">Step 6 — Conning Display</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">The bridge instrument panel — gyro compass rose, engine telegraph, rudder angle indicator, and autopilot all update in real time.</p>
+
+<table>
+  <tr><th>Instrument</th><th>Reading</th><th>Action</th></tr>
+  <tr><td>Gyro Compass Rose</td><td>Rotating compass card shows heading. Red lubber line at top = ship's head. Green dashed line = set course.</td><td>Watch heading change as autopilot steers. Gyro 1 and Gyro 2 toggles simulate failure.</td></tr>
+  <tr><td>Engine Telegraph</td><td>Lit position = current order. RPM bar shows actual engine speed building up.</td><td>Click any position on the right panel to give telegraph order.</td></tr>
+  <tr><td>Rudder Angle Indicator</td><td>Cyan needle = actual rudder. Amber dashed = ordered rudder. PORT (red left), STBD (blue right).</td><td>Use the rudder slider on right panel or click 35P / MDSHIP / 35S quick buttons.</td></tr>
+  <tr><td>Autopilot</td><td>Shows mode (HAND/AUTO/NFU), set course, actual heading, deviation, ROT.</td><td>Click HAND/AUTO/NFU buttons. In AUTO, type set course and autopilot steers to it.</td></tr>
+  <tr><td>Depth / UKC</td><td>Depth below surface and below keel shown in left panel.</td><td>Set shallow water alarm value. Red alarm if UKC drops below 2m.</td></tr>
+  <tr><td>GPS Position</td><td>Lat/Lon with XTE — Cross Track Error from planned route.</td><td>Watch XTE: if it exceeds 0.1NM an alarm fires and banner shows PORT or STBD of track.</td></tr>
+</table>
+
+<div class="tip">Bow Thruster: Enable with the toggle then slide power left (PORT) or right (STBD). Used for berthing manoeuvres at slow speed. Has no effect at speeds above 4 knots.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="ecdis">
+<div class="sec-hdr">Step 7 — ECDIS (Electronic Chart)</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">The electronic chart showing the Bosphorus Strait with own ship, AIS targets, route, depths, and dangers.</p>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Navigate the Chart</div>
+    <div class="step-desc">
+      • <strong style="color:#00ff9d">Zoom in</strong> — scroll mouse wheel up, or click ZOOM + button
+      <br>• <strong style="color:#00ff9d">Zoom out</strong> — scroll mouse wheel down, or click ZOOM -
+      <br>• <strong style="color:#00ff9d">Pan / Move chart</strong> — click and drag with left mouse button
+      <br>• <strong style="color:#00ff9d">Quick scale</strong> — use the Quick Scale dropdown (1:500,000 to 1:12,500)
+      <br>• <strong style="color:#00ff9d">FIT</strong> button — recentres chart on own ship position
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Read Chart Information</div>
+    <div class="step-desc">
+      • <strong style="color:#ffd700">Depth contours</strong> — coloured lines. Amber = safety contour. Red = shallow/danger.
+      <br>• <strong style="color:#ffd700">Depth soundings</strong> — numbers on chart in metres. Red = below safety depth.
+      <br>• <strong style="color:#ffd700">Dangers / Rocks</strong> — red cross symbols with depth value
+      <br>• <strong style="color:#ffd700">Buoys</strong> — diamond shapes: green = starboard, red = port, amber = special
+      <br>• <strong style="color:#ffd700">TSS lanes</strong> — blue dashed lines showing traffic separation
+      <br>• <strong style="color:#ffd700">Own ship</strong> — green silhouette with heading line and speed vector
+      <br>• <strong style="color:#ffd700">AIS targets</strong> — cyan triangles pointing in direction of travel
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Turn Display Layers On/Off</div>
+    <div class="step-desc">Left panel has toggles for every chart layer. Toggle off <strong>Depth Soundings</strong> for a cleaner chart. Toggle off <strong>TSS/VTS Zones</strong> if not needed. Toggle <strong>AIS Targets</strong> to hide/show all traffic.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Set Safety Settings</div>
+    <div class="step-desc">In the <strong>Safety Settings</strong> card (left panel), set:
+      <br>• Safety Depth — soundings shallower than this show in red
+      <br>• Safety Contour — the bold amber depth contour line
+      <br>• Shallow Contour — very shallow water warning
+      <br>• Bridge Height — for aerial clearance checks</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <div class="step-title">Load a Route</div>
+    <div class="step-desc">Right panel → Route Planning → click the preset dropdown → select a route. Waypoints appear as green circles on the chart connected by a dashed green line. A 0.1NM XTE corridor is shown.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <div class="step-title">Add Custom Waypoints by Clicking</div>
+    <div class="step-desc">Click <strong>+ ADD WPT</strong>. The button changes to say "CLICK CHART: ADD WPT". Now click anywhere on the chart to add a waypoint at that position. Click again for the next waypoint. Click the button again to stop adding.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <div class="step-title">AIS Target Information</div>
+    <div class="step-desc">Hover your mouse over any cyan triangle (AIS target) to see a popup showing: Name, Type, BRG, RNG, COG, SOG, CPA, TCPA. The AIS list on the right is sortable by distance or CPA — red items are close approach risks.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <div class="step-title">Mark MOB Position</div>
+    <div class="step-desc">Click <strong class="amb">MOB ON CHART</strong> in the left panel. A pulsing red MOB marker appears at own ship's current position. An alarm fires on all stations. Use this during MOB exercise scenarios.</div>
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="visual">
+<div class="sec-hdr">Step 8 — 3D Visual Bridge View</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">The 3D scene shows a realistic view from the bridge of the Bosphorus Strait.</p>
+
+<table>
+  <tr><th>Control</th><th>What it does</th></tr>
+  <tr><td>BOW button</td><td>View from bridge looking forward over bow. Default view.</td></tr>
+  <tr><td>STERN button</td><td>View looking aft over stern.</td></tr>
+  <tr><td>PORT button</td><td>View looking out to port (left) side.</td></tr>
+  <tr><td>STBD button</td><td>View looking out to starboard (right) side.</td></tr>
+  <tr><td>BINOCULARS</td><td>Activates binoculars overlay. FOV narrows to 8°. Crosshairs appear.</td></tr>
+  <tr><td>ALL ROUND</td><td>Camera rotates automatically 360° around own ship.</td></tr>
+  <tr><td>DAY / DUSK / NIGHT</td><td>Changes sky, lighting, stars, buoy lights, fog.</td></tr>
+  <tr><td>CALM / MODERATE / HEAVY</td><td>Controls wave height and ship rolling. HEAVY = large roll/heave.</td></tr>
+  <tr><td>GOOD / MIST / FOG</td><td>Controls 3D fog density. FOG = 200m visibility, triggers alarm.</td></tr>
+  <tr><td>LIGHTS OFF/ON</td><td>Toggles navigation lights (port red, starboard green, masthead white, stern white).</td></tr>
+  <tr><td>FLARES</td><td>Activates distress flare visual effect with amber light glow.</td></tr>
+  <tr><td>MOB LIGHT</td><td>Pulsing orange MOB light appears in water.</td></tr>
+  <tr><td>RAIN OFF/ON</td><td>Toggles rain particle effect.</td></tr>
+  <tr><td>LIGHTNING</td><td>Random lightning flashes in storm conditions.</td></tr>
+  <tr><td>TGT LABELS</td><td>Shows/hides target ship name and distance labels in scene.</td></tr>
+  <tr><td>FOV slider</td><td>Field of view 30°-120°. Narrow = zoomed in, Wide = wide angle.</td></tr>
+  <tr><td>HGT slider</td><td>Bridge height 5m-60m. Matches actual vessel bridge height from Master A.</td></tr>
+</table>
+
+<div class="sec-sub">Keyboard Shortcuts — 3D Visual</div>
+<div class="qref">
+  <div class="qr-item"><span class="qr-key">Key 1</span><span class="qr-val">Switch to BOW view</span></div>
+  <div class="qr-item"><span class="qr-key">Key 2</span><span class="qr-val">Switch to STERN view</span></div>
+  <div class="qr-item"><span class="qr-key">Key 3</span><span class="qr-val">Switch to PORT view</span></div>
+  <div class="qr-item"><span class="qr-key">Key 4</span><span class="qr-val">Switch to STBD view</span></div>
+  <div class="qr-item"><span class="qr-key">B</span><span class="qr-val">Toggle binoculars on/off</span></div>
+  <div class="qr-item"><span class="qr-key">N</span><span class="qr-val">Toggle DAY / NIGHT</span></div>
+  <div class="qr-item"><span class="qr-key">L</span><span class="qr-val">Toggle navigation lights</span></div>
+  <div class="qr-item"><span class="qr-key">R</span><span class="qr-val">Toggle rain on/off</span></div>
+  <div class="qr-item"><span class="qr-key">F11</span><span class="qr-val">Full screen (any tab)</span></div>
+  <div class="qr-item"><span class="qr-key">Ctrl+T</span><span class="qr-val">Open new Chrome tab</span></div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="exercise">
+<div class="sec-hdr">Step 9 — Running a Complete Exercise</div>
+<p style="color:#4a8ab0;margin-bottom:14px;">Follow this sequence for a professional classroom exercise session.</p>
+
+<div class="sec-sub">Before Students Arrive — Instructor Preparation (15 min)</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Open all 6 files in Chrome</div>
+    <div class="step-desc">Put Instructor tabs (Master A + B) on your screen. Put student tabs full-screen on student monitors.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Master A → Select vessel and load scenario</div>
+    <div class="step-desc">Select ship type → enter vessel name → select loading condition → set initial position → load route preset → set weather conditions → add target vessels.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Master B → Load scenario, add trainee names</div>
+    <div class="step-desc">Select scenario from library → click LOAD → add all student names → click LAUNCH ALL → wait for all LEDs to go green.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <div class="step-title">Master B → Start Recording</div>
+    <div class="step-desc">Type exercise name in the recording field → click ⏺ START RECORDING before pressing START.</div>
+  </div>
+</div>
+
+<div class="sec-sub">During Exercise — Instructor Controls</div>
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <div class="step-title">Master B → Press START</div>
+    <div class="step-desc">The big green START button. Simulation clock begins. All student displays activate.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <div class="step-title">Inject scenarios at key moments</div>
+    <div class="step-desc">Use Quick Inject to add: FOG when entering narrow channel, STORM in open sea, ENGINE FAIL at critical moment, MOB during passage.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <div class="step-title">PAUSE for teaching moments</div>
+    <div class="step-desc">Click ⏸ PAUSE. The scene freezes. Point to the radar or ECDIS and teach. Click ▶▶ RESUME to continue.</div>
+  </div>
+</div>
+
+<div class="sec-sub">After Exercise — Debrief</div>
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-body">
+    <div class="step-title">Master B → Stop and Export Debrief</div>
+    <div class="step-desc">Click ■ STOP → click 📊 EXPORT DEBRIEF. An HTML report downloads with: scenario details, trainee names, assessment scores for 5 categories, full event log with timestamps. Print or email to students.</div>
+  </div>
+</div>
+
+<div class="tip">For the most realistic experience: put each module on a separate monitor, run RADAR and ECDIS on the largest monitors, 3D Visual on a third monitor, and keep Master A+B on the instructor's laptop screen.</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="shortcuts">
+<div class="sec-hdr">Quick Reference — All Keyboard Shortcuts</div>
+<table>
+  <tr><th>Key</th><th>Module</th><th>Action</th></tr>
+  <tr><td>F11</td><td>Any</td><td>Toggle full screen — use this on student monitors</td></tr>
+  <tr><td>Ctrl + T</td><td>Chrome</td><td>Open a new browser tab</td></tr>
+  <tr><td>Ctrl + Shift + R</td><td>Chrome</td><td>Hard refresh — force reload latest file</td></tr>
+  <tr><td>F12</td><td>Chrome</td><td>Open developer tools / Console (for error checking)</td></tr>
+  <tr><td>1</td><td>3D Visual</td><td>BOW view</td></tr>
+  <tr><td>2</td><td>3D Visual</td><td>STERN view</td></tr>
+  <tr><td>3</td><td>3D Visual</td><td>PORT view</td></tr>
+  <tr><td>4</td><td>3D Visual</td><td>STBD view</td></tr>
+  <tr><td>B</td><td>3D Visual</td><td>Toggle binoculars</td></tr>
+  <tr><td>N</td><td>3D Visual</td><td>Toggle day/night</td></tr>
+  <tr><td>L</td><td>3D Visual</td><td>Toggle nav lights</td></tr>
+  <tr><td>R</td><td>3D Visual</td><td>Toggle rain</td></tr>
+  <tr><td>Alt + Tab</td><td>Windows</td><td>Switch between Chrome tabs / windows</td></tr>
+  <tr><td>Windows + Tab</td><td>Windows</td><td>Task view — move tabs to different monitors</td></tr>
+</table>
+</div>
+
+
+<!-- ══════════════════════════════════════════ -->
+<div class="section" id="troubleshoot">
+<div class="sec-hdr">Troubleshooting</div>
+
+<div class="sec-sub">Radar Range Buttons Not Working</div>
+<div class="step">
+  <div class="step-num">✓</div>
+  <div class="step-body">
+    <div class="step-title">Fixed in latest version</div>
+    <div class="step-desc">Download the latest BTM_Radar_XBand_ARPA.html from your Claude conversation. Range buttons now correctly highlight and the ring scale updates on click.</div>
+  </div>
+</div>
+
+<div class="sec-sub">Stations Not Communicating</div>
+<div class="danger">All files MUST be in the same folder. Files from different folders cannot communicate.</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Check they are all in one folder</div>
+    <div class="step-desc">Open Windows Explorer → navigate to BTM_Simulator folder → confirm all 6 files are there.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Check they are all open in SAME Chrome window</div>
+    <div class="step-desc">All 6 tabs must be in the same Chrome window, not different windows. BroadcastChannel only works within the same browser origin.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <div class="step-title">Hard refresh all tabs</div>
+    <div class="step-desc">Click each tab → Ctrl + Shift + R. Do this for all 6 tabs in sequence.</div>
+  </div>
+</div>
+
+<div class="sec-sub">3D Visual Black Screen</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Enable hardware acceleration</div>
+    <div class="code">chrome://settings/system → Use hardware acceleration: ON → Relaunch Chrome</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Check WebGL is working</div>
+    <div class="code">chrome://gpu  ← look for "WebGL: Hardware accelerated"</div>
+  </div>
+</div>
+
+<div class="sec-sub">Console Error — Any Module</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Get the exact error message</div>
+    <div class="step-desc">Press F12 → click Console tab → copy the red error text → paste it into the Claude conversation. The error will be fixed immediately.</div>
+  </div>
+</div>
+
+<div class="sec-sub">Display Too Small</div>
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <div class="step-title">Use F11 for full screen</div>
+    <div class="step-desc">Press F11 on any tab for true full-screen with no browser chrome. Press F11 again to exit.</div>
+  </div>
+</div>
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <div class="step-title">Reduce browser zoom if needed</div>
+    <div class="step-desc">Press Ctrl + Minus (-) to zoom out Chrome. Ctrl + 0 to reset to 100%.</div>
+  </div>
+</div>
+
+<div class="tip">For the best classroom experience: Use F11 on the Radar and ECDIS tabs. These are now wider with narrower panels as of the latest update.</div>
+
+</div><!-- end troubleshoot -->
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="footer-logo">CASY SIMULATIONS</div>
+  <div class="footer-sub">BTM Bridge Team Management Simulator v2.0 | Built with Claude AI | 6 Professional Modules</div>
+  <div style="margin-top:10px;font-size:11px;color:#0d2a45;">For support: paste any console error into your Claude conversation for immediate fix</div>
+</div>
+
+</body>
+</html>

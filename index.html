@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASY Simulations — BTM Bridge Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+
+body{
+  background:#03080f;
+  color:#c8dff0;
+  font-family:'Exo 2',sans-serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── ANIMATED BACKGROUND ── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(0,80,160,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(0,160,120,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 80%, rgba(0,60,120,0.12) 0%, transparent 60%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* Scanlines */
+body::after{
+  content:'';
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px);
+  pointer-events:none;
+  z-index:1;
+}
+
+/* ── HEADER ── */
+header{
+  position:relative;z-index:10;
+  padding:0;
+  background:linear-gradient(180deg,#020c18 0%,rgba(2,12,24,0.95) 100%);
+  border-bottom:1px solid rgba(0,180,255,0.2);
+}
+
+.header-inner{
+  max-width:1100px;margin:0 auto;
+  padding:28px 30px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;
+}
+
+.logo-block{display:flex;flex-direction:column;gap:4px;}
+
+.logo{
+  font-family:'Rajdhani',sans-serif;
+  font-size:38px;font-weight:700;
+  letter-spacing:5px;
+  color:#ffd700;
+  text-shadow:0 0 30px rgba(255,215,0,0.4), 0 0 60px rgba(255,215,0,0.15);
+  line-height:1;
+}
+
+.logo-sub{
+  font-family:'Rajdhani',sans-serif;
+  font-size:12px;font-weight:500;
+  letter-spacing:5px;
+  color:#3a7a9a;
+  text-transform:uppercase;
+}
+
+.header-right{
+  text-align:right;
+  font-family:'Share Tech Mono',monospace;
+  font-size:11px;
+}
+
+.hdr-clock{
+  font-size:16px;
+  color:#00d4ff;
+  text-shadow:0 0 10px rgba(0,212,255,0.4);
+  margin-bottom:4px;
+}
+
+.hdr-status{
+  display:flex;gap:12px;justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+.status-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(0,255,136,0.08);
+  border:1px solid rgba(0,255,136,0.25);
+  border-radius:20px;
+  padding:3px 10px;
+  font-size:10px;
+  color:#00ff88;
+}
+
+.status-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:#00ff88;
+  box-shadow:0 0 6px #00ff88;
+  animation:pulse2 2s infinite;
+}
+
+@keyframes pulse2{0%,100%{opacity:1;box-shadow:0 0 6px #00ff88;}50%{opacity:.5;box-shadow:0 0 12px #00ff88;}}
+
+/* ── HERO ── */
+.hero{
+  position:relative;z-index:10;
+  text-align:center;
+  padding:50px 30px 40px;
+  max-width:900px;
+  margin:0 auto;
+}
+
+.hero-title{
+  font-family:'Rajdhani',sans-serif;
+  font-size:clamp(22px,4vw,36px);
+  font-weight:700;
+  letter-spacing:3px;
+  color:#e8f4ff;
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+
+.hero-title span{color:#00d4ff;}
+
+.hero-desc{
+  font-size:15px;
+  color:#4a8ab0;
+  line-height:1.7;
+  max-width:680px;
+  margin:0 auto 28px;
+}
+
+.hero-badges{
+  display:flex;gap:8px;justify-content:center;flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.badge{
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px;
+  padding:4px 12px;
+  border-radius:20px;
+  border:1px solid;
+  letter-spacing:1px;
+}
+.badge-blue  {color:#00d4ff;border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.07);}
+.badge-green {color:#00ff88;border-color:rgba(0,255,136,0.3);background:rgba(0,255,136,0.07);}
+.badge-gold  {color:#ffd700;border-color:rgba(255,215,0,0.3);background:rgba(255,215,0,0.07);}
+.badge-red   {color:#ff6688;border-color:rgba(255,102,136,0.3);background:rgba(255,102,136,0.07);}
+
+/* ── IMPORTANT NOTICE BOX ── */
+.notice{
+  max-width:760px;margin:0 auto 40px;
+  background:rgba(255,170,0,0.07);
+  border:1px solid rgba(255,170,0,0.3);
+  border-radius:6px;
+  padding:14px 20px;
+  font-size:13px;
+  color:#cc8800;
+  text-align:left;
+  position:relative;z-index:10;
+}
+.notice strong{color:#ffaa00;}
+.notice ul{margin:6px 0 0 18px;}
+.notice li{margin-bottom:3px;}
+
+/* ── SECTION HEADER ── */
+.section-hdr{
+  max-width:1100px;margin:0 auto;
+  padding:0 30px;
+  font-family:'Rajdhani',sans-serif;
+  font-size:11px;font-weight:700;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  color:#1a4a6a;
+  margin-bottom:16px;
+  display:flex;align-items:center;gap:12px;
+  position:relative;z-index:10;
+}
+.section-hdr::after{content:'';flex:1;height:1px;background:rgba(26,74,106,0.4);}
+
+/* ── MODULE GRID ── */
+.modules-grid{
+  max-width:1100px;margin:0 auto;
+  padding:0 24px 20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:14px;
+  position:relative;z-index:10;
+}
+
+/* ── MODULE CARD ── */
+.mod-card{
+  background:linear-gradient(145deg,#07111e 0%,#050d18 100%);
+  border:1px solid #0d2a45;
+  border-radius:6px;
+  padding:20px;
+  transition:all .2s ease;
+  cursor:default;
+  position:relative;
+  overflow:hidden;
+}
+
+.mod-card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:2px;
+  transition:opacity .2s;
+  opacity:0;
+}
+
+.mod-card:hover{
+  border-color:rgba(0,212,255,0.4);
+  transform:translateY(-2px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4),0 0 0 1px rgba(0,212,255,0.1);
+}
+
+.mod-card:hover::before{opacity:1;}
+
+/* Card colour themes */
+.card-instructor .mod-card::before{background:linear-gradient(90deg,#ffd700,#ffaa00);}
+.card-instructor .mod-card:hover  {border-color:rgba(255,215,0,0.4);}
+.card-radar      .mod-card::before{background:linear-gradient(90deg,#00ff44,#00cc33);}
+.card-radar      .mod-card:hover  {border-color:rgba(0,255,68,0.4);}
+.card-conning    .mod-card::before{background:linear-gradient(90deg,#00d4ff,#0088cc);}
+.card-conning    .mod-card:hover  {border-color:rgba(0,212,255,0.5);}
+.card-ecdis      .mod-card::before{background:linear-gradient(90deg,#4488ff,#2255cc);}
+.card-ecdis      .mod-card:hover  {border-color:rgba(68,136,255,0.5);}
+.card-visual     .mod-card::before{background:linear-gradient(90deg,#ff6633,#cc3300);}
+.card-visual     .mod-card:hover  {border-color:rgba(255,102,51,0.5);}
+.card-guide      .mod-card::before{background:linear-gradient(90deg,#aa66ff,#7733cc);}
+.card-guide      .mod-card:hover  {border-color:rgba(170,102,255,0.4);}
+
+.mod-num{
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px;color:#1a4a6a;
+  margin-bottom:6px;letter-spacing:2px;
+}
+
+.mod-icon{
+  font-size:28px;
+  margin-bottom:8px;
+  display:block;
+}
+
+.mod-title{
+  font-family:'Rajdhani',sans-serif;
+  font-size:18px;font-weight:700;
+  letter-spacing:1px;
+  color:#e8f4ff;
+  margin-bottom:4px;
+}
+
+.mod-file{
+  font-family:'Share Tech Mono',monospace;
+  font-size:9px;color:#1a4a6a;
+  margin-bottom:10px;
+  letter-spacing:1px;
+}
+
+.mod-desc{
+  font-size:12px;color:#3a7a9a;
+  line-height:1.55;
+  margin-bottom:16px;
+  min-height:54px;
+}
+
+.mod-features{
+  display:flex;flex-wrap:wrap;gap:4px;
+  margin-bottom:16px;
+}
+
+.feat-tag{
+  font-size:9px;font-family:'Share Tech Mono',monospace;
+  padding:2px 7px;border-radius:2px;
+  background:rgba(0,212,255,0.07);
+  border:1px solid rgba(0,212,255,0.15);
+  color:#2a7a9a;letter-spacing:1px;
+}
+
+/* ── OPEN BUTTON ── */
+.open-btn{
+  display:block;width:100%;
+  font-family:'Rajdhani',sans-serif;
+  font-size:13px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:11px 16px;
+  border-radius:4px;
+  border:none;
+  cursor:pointer;
+  transition:all .15s;
+  text-align:center;
+  text-decoration:none;
+}
+
+.btn-gold  {background:linear-gradient(135deg,#cc9900,#aa7700);color:#fff8e0;}
+.btn-gold:hover  {background:linear-gradient(135deg,#ffcc00,#cc9900);box-shadow:0 4px 20px rgba(255,204,0,0.3);}
+.btn-green {background:linear-gradient(135deg,#006622,#004411);color:#00ff88;}
+.btn-green:hover {background:linear-gradient(135deg,#008833,#005522);box-shadow:0 4px 20px rgba(0,255,136,0.25);}
+.btn-blue  {background:linear-gradient(135deg,#005588,#003355);color:#00d4ff;}
+.btn-blue:hover  {background:linear-gradient(135deg,#0077aa,#005577);box-shadow:0 4px 20px rgba(0,212,255,0.25);}
+.btn-navy  {background:linear-gradient(135deg,#223388,#112255);color:#88aaff;}
+.btn-navy:hover  {background:linear-gradient(135deg,#334499,#223377);box-shadow:0 4px 20px rgba(68,136,255,0.25);}
+.btn-orange{background:linear-gradient(135deg,#882200,#661100);color:#ff8866;}
+.btn-orange:hover{background:linear-gradient(135deg,#aa3300,#882200);box-shadow:0 4px 20px rgba(255,102,51,0.25);}
+.btn-purple{background:linear-gradient(135deg,#552288,#331166);color:#cc88ff;}
+.btn-purple:hover{background:linear-gradient(135deg,#6633aa,#442288);box-shadow:0 4px 20px rgba(170,102,255,0.25);}
+
+/* ── HOW TO USE ── */
+.howto{
+  max-width:1100px;margin:20px auto 0;
+  padding:0 24px 20px;
+  position:relative;z-index:10;
+}
+
+.howto-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:10px;
+}
+
+.howto-step{
+  background:#07111e;
+  border:1px solid #0d2a45;
+  border-radius:4px;
+  padding:14px;
+  display:flex;gap:12px;align-items:flex-start;
+}
+
+.step-n{
+  font-family:'Rajdhani',sans-serif;
+  font-size:22px;font-weight:700;
+  color:#00d4ff;
+  line-height:1;min-width:28px;
+}
+
+.step-t{
+  font-family:'Rajdhani',sans-serif;
+  font-size:13px;font-weight:700;
+  color:#c8dff0;margin-bottom:3px;
+}
+
+.step-d{font-size:11px;color:#3a7a9a;line-height:1.5;}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid rgba(13,42,69,0.6);
+  padding:30px;text-align:center;
+  position:relative;z-index:10;
+  margin-top:40px;
+}
+
+.footer-logo{
+  font-family:'Rajdhani',sans-serif;
+  font-size:24px;font-weight:700;
+  letter-spacing:5px;color:#ffd700;
+  text-shadow:0 0 20px rgba(255,215,0,0.3);
+  margin-bottom:8px;
+}
+
+.footer-sub{
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px;color:#1a4a6a;
+  letter-spacing:2px;
+  margin-bottom:14px;
+}
+
+.footer-note{font-size:12px;color:#1a3a5a;line-height:1.6;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:600px){
+  .logo{font-size:26px;}
+  .hero-title{font-size:20px;}
+  .modules-grid{grid-template-columns:1fr;}
+  .header-inner{flex-direction:column;text-align:center;}
+  .header-right{text-align:center;}
+  .hdr-status{justify-content:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo-block">
+      <div class="logo">CASY SIMULATIONS</div>
+      <div class="logo-sub">Professional Maritime Training Solutions</div>
+    </div>
+    <div class="header-right">
+      <div class="hdr-clock" id="clock">--:--:-- UTC</div>
+      <div class="hdr-status">
+        <div class="status-pill"><span class="status-dot"></span>SYSTEM ONLINE</div>
+        <div class="status-pill"><span class="status-dot"></span>6 MODULES READY</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-title">BTM Bridge <span>Simulator</span></div>
+  <p class="hero-desc">
+    A professional-grade maritime bridge simulator for officer training.
+    Featuring real-time radar ARPA, ECDIS electronic charting, 3D visual bridge view,
+    conning instruments, and full instructor control — all in your browser.
+  </p>
+  <div class="hero-badges">
+    <span class="badge badge-blue">X-Band Radar ARPA</span>
+    <span class="badge badge-blue">ECDIS S-57 Chart</span>
+    <span class="badge badge-green">3D Visual Bridge</span>
+    <span class="badge badge-green">Bosphorus Strait</span>
+    <span class="badge badge-gold">6 Live Modules</span>
+    <span class="badge badge-gold">No Installation</span>
+    <span class="badge badge-red">Chrome Required</span>
+  </div>
+</div>
+
+<!-- NOTICE -->
+<div class="notice" style="position:relative;z-index:10;">
+  <strong>⚠ Important — Read Before Opening</strong>
+  <ul>
+    <li>Use <strong>Google Chrome</strong> only — Edge and Firefox are not supported</li>
+    <li>Open each module in a <strong>separate Chrome tab</strong> for best experience</li>
+    <li>Press <strong>F11</strong> on any tab for full screen display</li>
+    <li>For the 3D Visual, enable hardware acceleration: <strong>chrome://settings/system</strong></li>
+    <li>All modules on the same computer sync automatically in real time</li>
+  </ul>
+</div>
+
+<!-- INSTRUCTOR MODULES -->
+<div class="section-hdr" style="position:relative;z-index:10;max-width:1100px;margin:0 auto 12px;padding:0 24px;">
+  INSTRUCTOR STATIONS
+</div>
+
+<div class="modules-grid">
+
+  <!-- Master A -->
+  <div class="card-instructor">
+    <div class="mod-card">
+      <div class="mod-num">MODULE 01 — INSTRUCTOR</div>
+      <span class="mod-icon">⚙️</span>
+      <div class="mod-title">Master Station A</div>
+      <div class="mod-file">BTM_Master_A_Ship_Setup.html</div>
+      <div class="mod-desc">Ship type selection, cargo loading, weather environment, target vessel setup, route planning, waypoints, failure injection. The main instructor configuration panel.</div>
+      <div class="mod-features">
+        <span class="feat-tag">14 SHIP TYPES</span>
+        <span class="feat-tag">20 TARGETS</span>
+        <span class="feat-tag">BEAUFORT 0-12</span>
+        <span class="feat-tag">MOB</span>
+        <span class="feat-tag">FAILURES</span>
+      </div>
+      <a class="open-btn btn-gold" href="BTM_Master_A_Ship_Setup.html" target="_blank">▶ OPEN MASTER STATION A</a>
+    </div>
+  </div>
+
+  <!-- Master B -->
+  <div class="card-instructor">
+    <div class="mod-card">
+      <div class="mod-num">MODULE 02 — INSTRUCTOR</div>
+      <span class="mod-icon">🎮</span>
+      <div class="mod-title">Master Station B</div>
+      <div class="mod-file">BTM_Master_B_Commander.html</div>
+      <div class="mod-desc">Simulator commander — start, pause, stop, resume, record exercises. 15 built-in scenarios, speed control ×0.25 to ×8, live assessment scoring, debrief export.</div>
+      <div class="mod-features">
+        <span class="feat-tag">15 SCENARIOS</span>
+        <span class="feat-tag">RECORDING</span>
+        <span class="feat-tag">DEBRIEF</span>
+        <span class="feat-tag">SPEED ×8</span>
+        <span class="feat-tag">QUICK INJECT</span>
+      </div>
+      <a class="open-btn btn-gold" href="BTM_Master_B_Commander.html" target="_blank">▶ OPEN MASTER STATION B</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- STUDENT MODULES -->
+<div class="section-hdr" style="position:relative;z-index:10;max-width:1100px;margin:20px auto 12px;padding:0 24px;">
+  STUDENT STATIONS — BRIDGE DISPLAYS
+</div>
+
+<div class="modules-grid">
+
+  <!-- Radar -->
+  <div class="card-radar">
+    <div class="mod-card">
+      <div class="mod-num">MODULE 03 — NAVIGATION</div>
+      <span class="mod-icon">📡</span>
+      <div class="mod-title">Marine Radar X-Band</div>
+      <div class="mod-file">BTM_Radar_XBand_ARPA.html</div>
+      <div class="mod-desc">Full X-Band radar with ARPA tracking for up to 20 targets. Animated sweep, land echoes, sea clutter, EBL, VRM, guard zone, trial manoeuvre, AIS overlay.</div>
+      <div class="mod-features">
+        <span class="feat-tag">ARPA 20 TGT</span>
+        <span class="feat-tag">EBL×2 VRM×2</span>
+        <span class="feat-tag">CPA/TCPA</span>
+        <span class="feat-tag">GUARD ZONE</span>
+        <span class="feat-tag">T-SIM</span>
+        <span class="feat-tag">8 RANGES</span>
+      </div>
+      <a class="open-btn btn-green" href="BTM_Radar_XBand_ARPA.html" target="_blank">▶ OPEN RADAR</a>
+    </div>
+  </div>
+
+  <!-- Conning -->
+  <div class="card-conning">
+    <div class="mod-card">
+      <div class="mod-num">MODULE 04 — BRIDGE INSTRUMENTS</div>
+      <span class="mod-icon">🧭</span>
+      <div class="mod-title">Conning Display</div>
+      <div class="mod-file">BTM_Conning_Display.html</div>
+      <div class="mod-desc">Live gyro compass rose, engine telegraph (Full Ahead to Full Astern), rudder angle indicator, autopilot control unit, echo sounder, GPS, XTE, ship particulars.</div>
+      <div class="mod-features">
+        <span class="feat-tag">GYRO ROSE</span>
+        <span class="feat-tag">TELEGRAPH</span>
+        <span class="feat-tag">RUDDER IND.</span>
+        <span class="feat-tag">AUTOPILOT</span>
+        <span class="feat-tag">ECHO SOUNDER</span>
+        <span class="feat-tag">UKC ALARM</span>
+      </div>
+      <a class="open-btn btn-blue" href="BTM_Conning_Display.html" target="_blank">▶ OPEN CONNING DISPLAY</a>
+    </div>
+  </div>
+
+  <!-- ECDIS -->
+  <div class="card-ecdis">
+    <div class="mod-card">
+      <div class="mod-num">MODULE 05 — CHART</div>
+      <span class="mod-icon">🗺️</span>
+      <div class="mod-title">ECDIS</div>
+      <div class="mod-file">BTM_ECDIS.html</div>
+      <div class="mod-desc">Electronic chart of Bosphorus Strait. 400 depth soundings, safety contours, dangers, TSS lanes, buoys, AIS targets, route planning, XTE corridor, MOB marking.</div>
+      <div class="mod-features">
+        <span class="feat-tag">400 SOUNDINGS</span>
+        <span class="feat-tag">DEPTH CONTOURS</span>
+        <span class="feat-tag">AIS OVERLAY</span>
+        <span class="feat-tag">ROUTE PLAN</span>
+        <span class="feat-tag">ZOOM ×200</span>
+        <span class="feat-tag">SAFETY ALARMS</span>
+      </div>
+      <a class="open-btn btn-navy" href="BTM_ECDIS.html" target="_blank">▶ OPEN ECDIS</a>
+    </div>
+  </div>
+
+  <!-- 3D Visual -->
+  <div class="card-visual">
+    <div class="mod-card">
+      <div class="mod-num">MODULE 06 — VISUAL</div>
+      <span class="mod-icon">🌊</span>
+      <div class="mod-title">3D Visual Bridge</div>
+      <div class="mod-file">BTM_3D_Visual.html</div>
+      <div class="mod-desc">Three.js 3D scene from ship's bridge. Bosphorus coastline with realistic buildings, trees, mosques, Bosphorus Bridge. Weather effects, day/night, binoculars, nav lights.</div>
+      <div class="mod-features">
+        <span class="feat-tag">THREE.JS 3D</span>
+        <span class="feat-tag">BOW/STERN/PORT</span>
+        <span class="feat-tag">DAY/NIGHT</span>
+        <span class="feat-tag">WEATHER</span>
+        <span class="feat-tag">BINOCULARS</span>
+        <span class="feat-tag">NAV LIGHTS</span>
+      </div>
+      <a class="open-btn btn-orange" href="BTM_3D_Visual.html" target="_blank">▶ OPEN 3D VISUAL</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- REFERENCE -->
+<div class="section-hdr" style="position:relative;z-index:10;max-width:1100px;margin:20px auto 12px;padding:0 24px;">
+  REFERENCE
+</div>
+
+<div class="modules-grid" style="grid-template-columns:1fr;">
+  <div class="card-guide">
+    <div class="mod-card" style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <div style="flex-shrink:0;">
+        <span class="mod-icon" style="font-size:36px;margin:0;">📖</span>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div class="mod-num">REFERENCE — COMPLETE GUIDE</div>
+        <div class="mod-title">Step-by-Step User Guide</div>
+        <div class="mod-desc" style="min-height:0;margin-bottom:0;">Full instructions: setup, how to run each module, exercise procedures, keyboard shortcuts, and troubleshooting for all 6 modules.</div>
+      </div>
+      <div style="min-width:200px;">
+        <a class="open-btn btn-purple" href="BTM_User_Guide.html" target="_blank">▶ OPEN USER GUIDE</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW TO USE -->
+<div class="howto">
+  <div class="section-hdr" style="max-width:none;padding:0;margin-bottom:14px;">
+    HOW TO USE THIS PAGE
+  </div>
+  <div class="howto-grid">
+    <div class="howto-step">
+      <div class="step-n">1</div>
+      <div>
+        <div class="step-t">Open Chrome</div>
+        <div class="step-d">Use Google Chrome only. Other browsers do not support all simulator features.</div>
+      </div>
+    </div>
+    <div class="howto-step">
+      <div class="step-n">2</div>
+      <div>
+        <div class="step-t">Click a Module Button</div>
+        <div class="step-d">Each coloured button opens that module in a new tab. Students open Radar, ECDIS, Conning, or 3D Visual.</div>
+      </div>
+    </div>
+    <div class="howto-step">
+      <div class="step-n">3</div>
+      <div>
+        <div class="step-t">Press F11 for Full Screen</div>
+        <div class="step-d">After the module opens, press F11 on your keyboard for a full-screen professional display.</div>
+      </div>
+    </div>
+    <div class="howto-step">
+      <div class="step-n">4</div>
+      <div>
+        <div class="step-t">Instructor Opens Master A + B</div>
+        <div class="step-d">The instructor opens both Master Station A and B. These control the entire simulation.</div>
+      </div>
+    </div>
+    <div class="howto-step">
+      <div class="step-n">5</div>
+      <div>
+        <div class="step-t">All Modules on Same Computer Sync</div>
+        <div class="step-d">Open multiple tabs in the same Chrome window — they communicate automatically. No setup needed.</div>
+      </div>
+    </div>
+    <div class="howto-step">
+      <div class="step-n">6</div>
+      <div>
+        <div class="step-t">Read the User Guide</div>
+        <div class="step-d">Open the User Guide for complete step-by-step operating instructions for every module.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">CASY SIMULATIONS</div>
+  <div class="footer-sub">BTM Bridge Team Management Simulator — Version 2.0</div>
+  <div class="footer-note">
+    Professional Maritime Training | Bridge Simulator | Bosphorus Strait Exercise Area<br>
+    Built for officer training in collision avoidance, passage planning, and emergency response
+  </div>
+</footer>
+
+<script>
+// Live UTC clock
+function updateClock() {
+  var now = new Date();
+  var h = String(now.getUTCHours()).padStart(2,'0');
+  var m = String(now.getUTCMinutes()).padStart(2,'0');
+  var s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = h+':'+m+':'+s+' UTC';
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+</body>
+</html>

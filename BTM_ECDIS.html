@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTM Simulator — ECDIS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a1628;color:#c8dff0;font-family:'Share Tech Mono',monospace;font-size:11px;}
+
+#wrap{display:grid;grid-template-columns:150px 1fr 160px;grid-template-rows:36px 1fr 32px;height:100vh;}
+
+/* TOP BAR */
+#topbar{grid-column:1/4;background:#060e1c;border-bottom:1px solid #0d2a45;display:flex;align-items:center;padding:0 10px;gap:8px;}
+.tb-logo{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;color:#00d4ff;letter-spacing:3px;}
+.tb-logo span{color:#00ff9d;}
+.tb-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:2px;color:#3a7a9a;text-transform:uppercase;}
+.tb-clock{font-family:'Share Tech Mono',monospace;font-size:13px;color:#00d4ff;margin-left:auto;}
+.led{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:3px;}
+.led.g{background:#00ff88;box-shadow:0 0 5px #00ff88;}
+.led.r{background:#ff2244;box-shadow:0 0 5px #ff2244;animation:blk 1s infinite;}
+.led.a{background:#ffaa00;box-shadow:0 0 5px #ffaa00;}
+.led.o{background:#1a3a55;}
+.ll{font-size:9px;color:#2a5a7a;margin-right:6px;}
+@keyframes blk{0%,100%{opacity:1}50%{opacity:.1}}
+
+/* BOTTOM BAR */
+#botbar{grid-column:1/4;background:#060e1c;border-top:1px solid #0d2a45;display:flex;align-items:center;padding:0 10px;gap:14px;font-size:10px;}
+.bg{display:flex;flex-direction:column;}
+.bl{font-size:8px;color:#1a4a6a;letter-spacing:1px;}
+.bv{font-size:11px;color:#00ff9d;font-family:'Share Tech Mono';}
+
+/* PANELS */
+.lpanel{background:#060e1c;border-right:1px solid #0d2a45;overflow-y:auto;padding:5px;}
+.rpanel{background:#060e1c;border-left:1px solid #0d2a45;overflow-y:auto;padding:5px;}
+
+.sec{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#00d4ff;border-bottom:1px solid #0d2a45;padding:2px 0 3px;margin-bottom:4px;}
+.card{background:#07111e;border:1px solid #0d2a45;border-radius:2px;padding:6px;margin-bottom:4px;}
+
+/* BUTTONS */
+.btn{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 6px;border-radius:2px;border:1px solid #0d2a45;background:#07111e;color:#3a7a9a;cursor:pointer;transition:all .12s;display:block;width:100%;text-align:center;margin-bottom:2px;}
+.btn:hover{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,0.07);}
+.btn.on{background:rgba(0,212,255,0.14);border-color:#00d4ff;color:#00d4ff;}
+.btn.grn{border-color:#006633;color:#00ff88;}
+.btn.grn.on,.btn.grn:hover{background:rgba(0,255,136,0.12);border-color:#00ff88;}
+.btn.red{border-color:#661122;color:#ff4466;}
+.btn.red:hover,.btn.red.on{background:rgba(255,68,102,0.12);border-color:#ff4466;}
+.btn.amb{border-color:#664400;color:#ffaa00;}
+.btn.amb.on,.btn.amb:hover{background:rgba(255,170,0,0.12);border-color:#ffaa00;}
+.btn2{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:2px;}
+.btn2 .btn{margin-bottom:0;}
+.btn3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;margin-bottom:2px;}
+.btn3 .btn{margin-bottom:0;}
+
+label{font-size:9px;color:#1a4a6a;display:block;margin-bottom:1px;letter-spacing:1px;}
+select,input[type=number],input[type=text]{width:100%;background:#020912;border:1px solid #0d2a45;color:#c8dff0;font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 4px;border-radius:1px;outline:none;margin-bottom:3px;-webkit-appearance:none;appearance:none;}
+select:focus,input:focus{border-color:#00d4ff;}
+select option{background:#030810;}
+
+.digi{background:#020912;border:1px solid #0d2a45;font-family:'Share Tech Mono',monospace;font-size:12px;color:#00ff9d;text-align:center;padding:3px;margin-bottom:2px;letter-spacing:2px;}
+.digi-sm{font-size:10px;padding:2px;}
+.digi-lbl{font-size:8px;color:#1a4a6a;text-align:center;letter-spacing:1px;margin-bottom:2px;}
+
+/* CHART AREA */
+#chartArea{position:relative;overflow:hidden;background:#1a3a5c;cursor:crosshair;}
+#chartCanvas{position:absolute;top:0;left:0;}
+#shipCanvas{position:absolute;top:0;left:0;pointer-events:none;}
+
+/* OVERLAYS */
+#chartOverlay{position:absolute;top:6px;left:6px;background:rgba(6,14,28,0.88);border:1px solid #0d2a45;padding:5px 8px;font-size:9px;pointer-events:none;z-index:50;}
+.ov-row{display:flex;justify-content:space-between;gap:16px;}
+.ov-lbl{color:#1a4a6a;}
+.ov-val{color:#00ff9d;font-family:'Share Tech Mono';}
+
+#alarmBanner{position:absolute;top:0;left:0;right:0;background:rgba(255,34,68,0.18);border-bottom:1px solid #ff2244;padding:3px 8px;font-size:10px;color:#ff4466;display:none;z-index:60;text-align:center;font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:2px;}
+
+#cursorInfo{position:absolute;bottom:6px;left:6px;background:rgba(6,14,28,0.88);border:1px solid #0d2a45;padding:3px 8px;font-size:9px;color:#3a7a9a;pointer-events:none;z-index:50;}
+
+#scaleBar{position:absolute;bottom:6px;right:160px;background:rgba(6,14,28,0.88);border:1px solid #0d2a45;padding:3px 8px;font-size:9px;color:#3a7a9a;pointer-events:none;z-index:50;}
+
+/* TARGET POPUP */
+#tgtPopup{position:absolute;background:rgba(6,14,28,0.95);border:1px solid #00d4ff;padding:7px;font-size:9px;display:none;z-index:100;pointer-events:none;min-width:150px;}
+.tp-hdr{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:700;color:#00ff9d;margin-bottom:4px;}
+.tp-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:2px;}
+.tp-lbl{color:#1a4a6a;} .tp-val{color:#00d4ff;}
+
+/* ROUTE TABLE */
+.rt-row{display:grid;grid-template-columns:22px 1fr 1fr 36px;gap:2px;padding:2px 0;border-bottom:1px solid rgba(13,42,69,0.4);font-size:9px;align-items:center;}
+.rt-hdr{color:#1a4a6a;font-size:8px;}
+.rt-num{color:#00d4ff;} .rt-coord{color:#c8dff0;} .rt-spd{color:#00ff88;}
+
+/* ALARM ITEMS */
+.alm{background:rgba(255,34,68,0.07);border:1px solid rgba(255,34,68,0.2);border-radius:1px;padding:2px 4px;margin-bottom:2px;font-size:9px;color:#ff4466;cursor:pointer;}
+.alm.ack{color:#1a4a6a;border-color:#0d2a45;background:transparent;}
+
+/* DATA ROWS */
+.drow{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid rgba(13,42,69,0.3);}
+.drow-l{font-size:9px;color:#1a4a6a;} .drow-v{font-size:9px;color:#00d4ff;font-family:'Share Tech Mono';}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:#060e1c;}
+::-webkit-scrollbar-thumb{background:#0d2a45;}
+
+.tog-wrap{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.tog-lbl{font-size:10px;color:#3a7a9a;}
+.tog{position:relative;width:34px;height:17px;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-sl{position:absolute;inset:0;background:#020912;border:1px solid #0d2a45;border-radius:9px;cursor:pointer;transition:.3s;}
+.tog-sl::before{content:'';position:absolute;width:11px;height:11px;left:2px;bottom:2px;background:#1a4a6a;border-radius:50%;transition:.3s;}
+.tog input:checked+.tog-sl{background:rgba(0,212,255,0.18);border-color:#00d4ff;}
+.tog input:checked+.tog-sl::before{transform:translateX(17px);background:#00d4ff;box-shadow:0 0 4px #00d4ff;}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-logo">BTM<span>SIM</span></div>
+  <div class="tb-title">ECDIS — Electronic Chart Display &amp; Information System</div>
+  <span class="led g"></span><span class="ll">GPS</span>
+  <span class="led g" id="led-chart"></span><span class="ll">CHART</span>
+  <span class="led o" id="led-alm"></span><span class="ll">ALARM</span>
+  <span class="led o" id="led-ais"></span><span class="ll">AIS</span>
+  <div class="tb-clock" id="clock">--:--:-- UTC</div>
+</div>
+
+<!-- LEFT PANEL -->
+<div class="lpanel">
+
+  <div class="sec">Chart Control</div>
+  <div class="card">
+    <div class="digi-lbl">CHART SCALE</div>
+    <div class="digi digi-sm" id="chartScale">1 : 50 000</div>
+    <div class="btn3">
+      <button class="btn" onclick="zoom(2)">ZOOM +</button>
+      <button class="btn" onclick="zoom(0.5)">ZOOM -</button>
+      <button class="btn" onclick="resetView()">FIT</button>
+    </div>
+    <label>QUICK SCALE</label>
+    <select id="scaleSelect" onchange="setScale(this.value)">
+      <option value="0.3">1:800 000 — Overview</option>
+      <option value="0.5">1:500 000 — Ocean</option>
+      <option value="1">1:200 000 — Coastal</option>
+      <option value="2">1:100 000 — Approach</option>
+      <option value="4" selected>1:50 000 — Harbour</option>
+      <option value="8">1:25 000 — Berthing</option>
+      <option value="16">1:12 500 — Detailed</option>
+      <option value="32">1:6 000 — Very Detailed</option>
+      <option value="64">1:3 000 — Berth Close-up</option>
+      <option value="120">1:1 500 — Maximum Detail</option>
+    </select>
+    <div class="tog-wrap">
+      <span class="tog-lbl">North Up</span>
+      <label class="tog"><input type="checkbox" id="togNorthUp" checked onchange="drawChart()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="tog-wrap">
+      <span class="tog-lbl">Course Up</span>
+      <label class="tog"><input type="checkbox" id="togCourseUp" onchange="setCourseUp()"><span class="tog-sl"></span></label>
+    </div>
+    <div class="tog-wrap">
+      <span class="tog-lbl">True Motion</span>
+      <label class="tog"><input type="checkbox" id="togTM"><span class="tog-sl"></span></label>
+    </div>
+  </div>
+
+  <div class="sec">Display Layers</div>
+  <div class="card">
+    <div class="tog-wrap"><span class="tog-lbl">Depth Contours</span><label class="tog"><input type="checkbox" id="togDepth" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Depth Soundings</span><label class="tog"><input type="checkbox" id="togSoundings" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Dangers</span><label class="tog"><input type="checkbox" id="togDangers" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">TSS / VTS Zones</span><label class="tog"><input type="checkbox" id="togTSS" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Buoys &amp; Beacons</span><label class="tog"><input type="checkbox" id="togBuoys" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Coastline</span><label class="tog"><input type="checkbox" id="togCoast" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">AIS Targets</span><label class="tog"><input type="checkbox" id="togAIS" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Own Ship Vector</span><label class="tog"><input type="checkbox" id="togVector" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Planned Route</span><label class="tog"><input type="checkbox" id="togRoute" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Past Track</span><label class="tog"><input type="checkbox" id="togTrack" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Grid / Graticule</span><label class="tog"><input type="checkbox" id="togGrid" checked onchange="drawChart()"><span class="tog-sl"></span></label></div>
+  </div>
+
+  <div class="sec">Safety Settings</div>
+  <div class="card">
+    <label>SAFETY DEPTH (m)</label>
+    <input type="number" id="safetyDepth" min="1" max="50" value="15" oninput="drawChart()">
+    <label>SAFETY CONTOUR (m)</label>
+    <input type="number" id="safetyContour" min="1" max="100" value="20" oninput="drawChart()">
+    <label>SHALLOW CONTOUR (m)</label>
+    <input type="number" id="shallowContour" min="1" max="30" value="5" oninput="drawChart()">
+    <label>DEEP CONTOUR (m)</label>
+    <input type="number" id="deepContour" min="10" max="500" value="30" oninput="drawChart()">
+    <label>BRIDGE HEIGHT (m)</label>
+    <input type="number" id="bridgeHeight" min="5" max="80" value="35">
+  </div>
+
+  <div class="sec">Anchor / Position</div>
+  <div class="card">
+    <button class="btn grn" id="btnDropAnchor" onclick="dropAnchor()">DROP ANCHOR</button>
+    <button class="btn" onclick="markPos()">MARK POSITION</button>
+    <button class="btn" onclick="clearMarks()">CLEAR MARKS</button>
+    <button class="btn amb" onclick="mobOnChart()">MOB ON CHART</button>
+  </div>
+
+  <div class="sec">ENC Info</div>
+  <div class="card">
+    <div class="drow"><span class="drow-l">Chart Datum</span><span class="drow-v">WGS-84</span></div>
+    <div class="drow"><span class="drow-l">Projection</span><span class="drow-v">Mercator</span></div>
+    <div class="drow"><span class="drow-l">ENC Cell</span><span class="drow-v">TR525218</span></div>
+    <div class="drow"><span class="drow-l">Edition</span><span class="drow-v">5.2017</span></div>
+    <div class="drow"><span class="drow-l">Update</span><span class="drow-v">2019/11/15</span></div>
+    <div class="drow"><span class="drow-l">Area</span><span class="drow-v">Bosphorus</span></div>
+    <div style="background:rgba(255,170,0,0.08);border:1px solid rgba(255,170,0,0.3);padding:3px 5px;margin-top:4px;font-size:8px;color:#ffaa00;">
+      PERMIT cells may be expired. Verify before use. NOT for primary navigation.
+    </div>
+  </div>
+
+</div>
+
+<!-- CHART AREA -->
+<div id="chartArea">
+  <canvas id="chartCanvas"></canvas>
+  <canvas id="shipCanvas"></canvas>
+  <div id="chartOverlay">
+    <div class="ov-row">
+      <span class="ov-lbl">LAT</span><span class="ov-val" id="ov-lat">40°58.283N</span>
+      <span class="ov-lbl" style="margin-left:8px">LON</span><span class="ov-val" id="ov-lon">028°59.871E</span>
+    </div>
+    <div class="ov-row">
+      <span class="ov-lbl">HDG</span><span class="ov-val" id="ov-hdg">011.0°</span>
+      <span class="ov-lbl" style="margin-left:8px">SOG</span><span class="ov-val" id="ov-sog">0.0 kts</span>
+      <span class="ov-lbl" style="margin-left:8px">COG</span><span class="ov-val" id="ov-cog">011.0°</span>
+    </div>
+    <div class="ov-row">
+      <span class="ov-lbl">DEPTH</span><span class="ov-val" id="ov-dep">026.8m</span>
+      <span class="ov-lbl" style="margin-left:8px">UKC</span><span class="ov-val" id="ov-ukc">12.0m</span>
+      <span class="ov-lbl" style="margin-left:8px">DTG</span><span class="ov-val" id="ov-dtg">---NM</span>
+    </div>
+  </div>
+  <div id="alarmBanner" id="almBanner">⚠ NAVIGATION ALARM ACTIVE</div>
+  <div id="cursorInfo">CURSOR: --- | ---</div>
+  <div id="scaleBar">Scale</div>
+  <div id="tgtPopup">
+    <div class="tp-hdr" id="tpName">TARGET</div>
+    <div class="tp-row"><span class="tp-lbl">BRG</span><span class="tp-val" id="tpBrg">---°</span></div>
+    <div class="tp-row"><span class="tp-lbl">RNG</span><span class="tp-val" id="tpRng">--- NM</span></div>
+    <div class="tp-row"><span class="tp-lbl">COG</span><span class="tp-val" id="tpCog">---°</span></div>
+    <div class="tp-row"><span class="tp-lbl">SOG</span><span class="tp-val" id="tpSpd">--- kts</span></div>
+    <div class="tp-row"><span class="tp-lbl">CPA</span><span class="tp-val" id="tpCpa">--- NM</span></div>
+    <div class="tp-row"><span class="tp-lbl">TCPA</span><span class="tp-val" id="tpTcpa">--- min</span></div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="rpanel">
+
+  <div class="sec">Own Ship</div>
+  <div class="card">
+    <div class="digi-lbl">LATITUDE</div>
+    <div class="digi digi-sm" id="rp-lat">40°58.283N</div>
+    <div class="digi-lbl">LONGITUDE</div>
+    <div class="digi digi-sm" id="rp-lon">028°59.871E</div>
+    <div class="digi-lbl">HEADING / COG</div>
+    <div class="digi digi-sm" id="rp-hdg">011.0° / 011.0°</div>
+    <div class="digi-lbl">SOG / STW</div>
+    <div class="digi digi-sm" id="rp-spd">0.0 / 0.0 kts</div>
+    <div class="digi-lbl">DEPTH / UKC</div>
+    <div class="digi digi-sm" id="rp-dep">026.8 / 12.0 m</div>
+    <div class="digi-lbl">XTE (NM)</div>
+    <div class="digi digi-sm" id="rp-xte">0.000 NM</div>
+  </div>
+
+  <div class="sec">Route Planning</div>
+  <div class="card">
+    <label>ROUTE PRESET</label>
+    <select id="routePreset" onchange="loadRoutePreset()">
+      <option value="">— Select Route —</option>
+      <option value="bosphorus_n">Bosphorus Northbound</option>
+      <option value="bosphorus_s">Bosphorus Southbound</option>
+      <option value="marmara_e">Sea of Marmara East</option>
+      <option value="marmara_w">Sea of Marmara West</option>
+      <option value="custom">Custom</option>
+    </select>
+    <div class="btn2">
+      <button class="btn grn" onclick="startRouteEdit()">+ ADD WPT</button>
+      <button class="btn red" onclick="clearRoute()">CLEAR</button>
+    </div>
+    <button class="btn" onclick="reverseRoute()">REVERSE ROUTE</button>
+    <button class="btn on" id="btnMonitor" onclick="toggleMonitor()">MONITORING ON</button>
+    <!-- Waypoint list -->
+    <div id="wptList" style="max-height:160px;overflow-y:auto;margin-top:4px;">
+      <div class="rt-row rt-hdr"><span>#</span><span>LAT</span><span>LON</span><span>kts</span></div>
+    </div>
+    <div style="display:flex;gap:4px;margin-top:4px;">
+      <div style="flex:1"><div class="digi-lbl">TOTAL DIST</div><div class="digi digi-sm" id="routeDist">0.0 NM</div></div>
+      <div style="flex:1"><div class="digi-lbl">ETA WPT</div><div class="digi digi-sm" id="routeETA">--:--</div></div>
+    </div>
+  </div>
+
+  <div class="sec">NAVTEX / Hazards</div>
+  <div class="card">
+    <div id="navtexList" style="max-height:80px;overflow-y:auto;">
+      <div style="font-size:9px;color:#ffaa00;margin-bottom:2px;">⚠ BOSPHORUS: Heavy NB traffic, current 2.8kts S</div>
+      <div style="font-size:9px;color:#ffaa00;margin-bottom:2px;">⚠ Fog patches reported — visibility 1-2NM</div>
+      <div style="font-size:9px;color:#3a7a9a;margin-bottom:2px;">◆ VTS Istanbul Ch 12 active</div>
+      <div style="font-size:9px;color:#3a7a9a;margin-bottom:2px;">◆ Pilot boarding area: 40°58.0N 028°59.5E</div>
+    </div>
+  </div>
+
+  <div class="sec">AIS Targets</div>
+  <div class="card">
+    <div style="font-size:9px;color:#1a4a6a;margin-bottom:3px;">TRACKED (<span id="aisCnt">0</span>)</div>
+    <div id="aisList" style="max-height:140px;overflow-y:auto;"></div>
+    <div class="btn2" style="margin-top:3px;">
+      <button class="btn" onclick="sortAISDist()">BY DIST</button>
+      <button class="btn" onclick="sortAISCPA()">BY CPA</button>
+    </div>
+  </div>
+
+  <div class="sec">Alarms</div>
+  <div id="ecAlarmList" style="max-height:100px;overflow-y:auto;"></div>
+  <button class="btn" onclick="ackAllAlarms()">ACK ALL</button>
+
+  <div class="sec" style="margin-top:4px;">UVSC Alarms</div>
+  <div class="card" style="font-size:9px;">
+    <div class="tog-wrap"><span class="tog-lbl">Position monitoring</span><label class="tog"><input type="checkbox" checked><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Datum difference</span><label class="tog"><input type="checkbox" checked><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Log port switch</span><label class="tog"><input type="checkbox" checked><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Heading failure</span><label class="tog"><input type="checkbox" checked><span class="tog-sl"></span></label></div>
+    <div class="tog-wrap"><span class="tog-lbl">Position system failure</span><label class="tog"><input type="checkbox" checked><span class="tog-sl"></span></label></div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="botbar">
+  <div class="bg"><div class="bl">LAT</div><div class="bv" id="bb-lat">40°58.283N</div></div>
+  <div class="bg"><div class="bl">LON</div><div class="bv" id="bb-lon">028°59.871E</div></div>
+  <div class="bg"><div class="bl">HDG</div><div class="bv" id="bb-hdg">011.0°</div></div>
+  <div class="bg"><div class="bl">SOG</div><div class="bv" id="bb-sog">0.0 kts</div></div>
+  <div class="bg"><div class="bl">COG</div><div class="bv" id="bb-cog">011.0°</div></div>
+  <div class="bg"><div class="bl">DEPTH</div><div class="bv" id="bb-dep">026.8 m</div></div>
+  <div class="bg"><div class="bl">UKC</div><div class="bv" id="bb-ukc">12.0 m</div></div>
+  <div class="bg"><div class="bl">XTE</div><div class="bv" id="bb-xte">0.000 NM</div></div>
+  <div class="bg"><div class="bl">NEXT WPT</div><div class="bv" id="bb-wpt">---</div></div>
+  <div class="bg" style="margin-left:auto;"><div class="bl">SIM TIME</div><div class="bv" id="bb-sim">00:00:00</div></div>
+  <div class="bg"><div class="bl">UTC</div><div class="bv" id="bb-utc">--:--:--</div></div>
+</div>
+
+</div><!-- end wrap -->
+
+<script>
+// =============================================
+// STATE
+// =============================================
+var ownHdg   = 11.0;
+var ownSog   = 0.0;
+var ownCog   = 11.0;
+var ownDepth = 26.8;
+var ownDraft = 14.8;
+var ownUKC   = 12.0;
+var ownXTE   = 0.0;
+var simSecs  = 0;
+var isPaused = false;
+var monitoring = true;
+var alarms   = [];
+
+// Ship position in decimal degrees (Bosphorus Strait)
+var shipLat  = 40.9714;
+var shipLon  = 28.9979;
+
+// Targets
+var aisTargets = [];
+var tidN = 1;
+
+// Route
+var waypoints = [];
+var routeEditing = false;
+var pastTrack = [];
+var marks = [];
+var anchorPos = null;
+var mobPos    = null;
+
+// Chart view — mercator pixel coords
+var viewLat  = 40.9714;
+var viewLon  = 28.9979;
+var zoomLevel = 4;  // NM per 100px roughly
+
+// Drag
+var isDragging = false;
+var dragStartX = 0, dragStartY = 0;
+var dragStartLat = 0, dragStartLon = 0;
+
+// =============================================
+// CANVAS
+// =============================================
+var chartArea   = document.getElementById('chartArea');
+var chartCanvas = document.getElementById('chartCanvas');
+var shipCanvas  = document.getElementById('shipCanvas');
+var cc          = chartCanvas.getContext('2d');
+var sc          = shipCanvas.getContext('2d');
+var CW, CH;
+
+function resizeCanvases() {
+  CW = chartArea.clientWidth;
+  CH = chartArea.clientHeight;
+  var dpr = window.devicePixelRatio || 1;
+  chartCanvas.width  = CW * dpr;
+  chartCanvas.height = CH * dpr;
+  chartCanvas.style.width  = CW + 'px';
+  chartCanvas.style.height = CH + 'px';
+  shipCanvas.width   = CW * dpr;
+  shipCanvas.height  = CH * dpr;
+  shipCanvas.style.width  = CW + 'px';
+  shipCanvas.style.height = CH + 'px';
+  cc.scale(dpr, dpr);
+  sc.scale(dpr, dpr);
+  drawChart();
+}
+window.addEventListener('resize', resizeCanvases);
+
+// =============================================
+// COORDINATE CONVERSION (Mercator)
+// =============================================
+var DEG2RAD = Math.PI / 180;
+
+function latLonToXY(lat, lon) {
+  // Pixel scale: how many pixels per degree
+  var pxPerDeg = pixelsPerDegree();
+  var dx = (lon - viewLon) * pxPerDeg;
+  var dy = -(lat - viewLat) * pxPerDeg * 1.3; // rough Mercator correction
+  return { x: CW/2 + dx, y: CH/2 + dy };
+}
+
+function xyToLatLon(x, y) {
+  var pxPerDeg = pixelsPerDegree();
+  var lon = viewLon + (x - CW/2) / pxPerDeg;
+  var lat = viewLat - (y - CH/2) / (pxPerDeg * 1.3);
+  return { lat: lat, lon: lon };
+}
+
+function pixelsPerDegree() {
+  // Linear scale: zoomLevel * 150 px per degree
+  // At zoomLevel=4  → 600 px/deg ≈ 1:50,000
+  // At zoomLevel=50 → 7500 px/deg ≈ 1:4,000  (berth detail)
+  // At zoomLevel=0.5→ 75 px/deg  ≈ 1:400,000 (overview)
+  return zoomLevel * 150;
+}
+
+function nmToPixels(nm) {
+  // 1 degree lat ≈ 60 NM
+  return nm * pixelsPerDegree() / 60;
+}
+
+function distNM(lat1, lon1, lat2, lon2) {
+  var dlat = (lat2 - lat1) * 60;
+  var dlon = (lon2 - lon1) * 60 * Math.cos((lat1+lat2)/2 * DEG2RAD);
+  return Math.sqrt(dlat*dlat + dlon*dlon);
+}
+
+function bearingTo(lat1, lon1, lat2, lon2) {
+  var dlat = lat2 - lat1;
+  var dlon = (lon2 - lon1) * Math.cos(lat1 * DEG2RAD);
+  return ((Math.atan2(dlon, dlat) * 180/Math.PI) + 360) % 360;
+}
+
+// =============================================
+// AIS TARGETS INITIALISATION (Bosphorus traffic)
+// =============================================
+var TNAMES = ['OCEAN TITAN','MAERSK STAR','GRAIN EAGLE','ISLAND QUEEN','NORTH STAR',
+              'ATLANTIC DAWN','TCG YILDIRIM','CAPE STORM','MSC OSCAR','BOSPHORUS SKY',
+              'BLACK SEA','MARMARA PEARL','THRACE TRADER','ISTANBUL STAR','AEGEAN GLORY'];
+var TTYPES = ['TANKER','CONTAINER','BULK CARRIER','FERRY','NAVAL','FISHING','GENERAL CARGO','TUG'];
+
+function spawnAISTarget() {
+  if (aisTargets.length >= 20) return;
+  var brgDeg = Math.random() * 360;
+  var distNm = 0.3 + Math.random() * 4;
+  var brgRad = brgDeg * DEG2RAD;
+  var dlat   = Math.cos(brgRad) * distNm / 60;
+  var dlon   = Math.sin(brgRad) * distNm / (60 * Math.cos(shipLat * DEG2RAD));
+  aisTargets.push({
+    id:      tidN++,
+    lat:     shipLat + dlat,
+    lon:     shipLon + dlon,
+    course:  Math.random() * 360,
+    speed:   2 + Math.random() * 14,
+    name:    TNAMES[Math.floor(Math.random()*TNAMES.length)],
+    type:    TTYPES[Math.floor(Math.random()*TTYPES.length)],
+    mmsi:    '271' + Math.floor(Math.random()*9000000+1000000),
+    selected:false
+  });
+}
+for (var sti = 0; sti < 10; sti++) spawnAISTarget();
+
+// =============================================
+// BOSPHORUS CHART DATA (simulated)
+// =============================================
+// Coastline as lat/lon polylines (simplified Bosphorus)
+var bosphorusEuro = [
+  // European shore (approximate)
+  [41.20,28.98],[41.18,28.97],[41.16,28.96],[41.14,28.97],[41.12,28.97],
+  [41.10,28.96],[41.08,28.96],[41.06,28.97],[41.04,28.98],[41.02,28.99],
+  [41.00,28.99],[40.98,28.99],[40.96,28.98],[40.94,28.98],[40.92,28.97],
+  [40.90,28.97],[40.88,28.96],[40.86,28.96],[40.84,28.97],[40.82,28.97]
+];
+var bosphorusAsia = [
+  // Asian shore (approximate)
+  [41.20,29.10],[41.18,29.09],[41.16,29.08],[41.14,29.08],[41.12,29.07],
+  [41.10,29.06],[41.08,29.06],[41.06,29.05],[41.04,29.04],[41.02,29.03],
+  [41.00,29.02],[40.98,29.01],[40.96,29.01],[40.94,29.00],[40.92,29.00],
+  [40.90,28.99],[40.88,28.99],[40.86,29.00],[40.84,29.00],[40.82,29.01]
+];
+
+// Depth contours (simplified rings around deep channel)
+var depthContours = [
+  // 20m contour
+  { depth:20, pts:[[41.00,28.99],[41.01,29.00],[41.02,29.01],[41.01,29.02],[41.00,29.01],[40.99,29.00],[41.00,28.99]] },
+  // 50m contour
+  { depth:50, pts:[[41.00,28.98],[41.02,29.00],[41.04,29.02],[41.02,29.04],[41.00,29.02],[40.98,29.00],[41.00,28.98]] },
+  // 100m contour
+  { depth:100, pts:[[41.00,28.97],[41.03,29.00],[41.06,29.03],[41.03,29.06],[41.00,29.03],[40.97,29.00],[41.00,28.97]] }
+];
+
+// TSS lanes
+var tssNBLane = [[40.82,28.99],[40.90,28.985],[41.00,28.992],[41.10,28.975],[41.18,28.968]];
+var tssSBLane = [[40.82,29.01],[40.90,29.005],[41.00,29.01],[41.10,29.000],[41.18,28.992]];
+
+// Buoys
+var buoys = [
+  {lat:41.00, lon:28.99, type:'green', name:'Bosphorus No.1'},
+  {lat:41.02, lon:29.00, type:'red',   name:'Bosphorus No.2'},
+  {lat:40.98, lon:28.99, type:'green', name:'Bosphorus No.3'},
+  {lat:40.96, lon:28.99, type:'red',   name:'Bosphorus No.4'},
+  {lat:40.94, lon:28.98, type:'green', name:'Bosphorus No.5'},
+  {lat:41.04, lon:29.01, type:'red',   name:'Bosphorus No.6'},
+  {lat:41.06, lon:29.01, type:'special',name:'Pilot Boarding'},
+  {lat:40.92, lon:28.97, type:'special',name:'Speed Limit'},
+];
+
+// Depth soundings — 400 points covering full Bosphorus channel
+var soundings = [];
+(function() {
+  // Bosphorus channel runs roughly from lat 40.82 to 41.20, lon 28.97 to 29.10
+  // Real Bosphorus depths: channel centre ~50-100m, edges 10-30m, shallows <10m
+  var regions = [
+    // Deep channel centre (N-S axis)
+    {latMin:40.88,latMax:41.18,lonMin:28.990,lonMax:29.005,depMin:40,depMax:110,count:80},
+    // European shallow shelf
+    {latMin:40.85,latMax:41.15,lonMin:28.960,lonMax:28.990,depMin:5,depMax:35,count:70},
+    // Asian shallow shelf
+    {latMin:40.85,latMax:41.15,lonMin:29.005,lonMax:29.045,depMin:5,depMax:35,count:70},
+    // Northern approaches (Black Sea end)
+    {latMin:41.15,latMax:41.22,lonMin:28.970,lonMax:29.020,depMin:20,depMax:80,count:40},
+    // Southern approaches (Marmara end)
+    {latMin:40.82,latMax:40.90,lonMin:28.970,lonMax:29.030,depMin:15,depMax:60,count:40},
+    // Very shallow nearshore Euro
+    {latMin:40.88,latMax:41.12,lonMin:28.950,lonMax:28.970,depMin:2,depMax:12,count:50},
+    // Very shallow nearshore Asia
+    {latMin:40.88,latMax:41.12,lonMin:29.010,lonMax:29.050,depMin:2,depMax:12,count:50},
+  ];
+  regions.forEach(function(r) {
+    for (var si=0; si<r.count; si++) {
+      var slat = r.latMin + Math.random()*(r.latMax-r.latMin);
+      var slon = r.lonMin + Math.random()*(r.lonMax-r.lonMin);
+      var dep  = Math.round(r.depMin + Math.random()*(r.depMax-r.depMin));
+      soundings.push({lat:slat, lon:slon, d:dep});
+    }
+  });
+})();
+
+// Dangers / rocks
+var dangers = [
+  {lat:41.012, lon:29.005, name:'Kandilli Shoal',   depth:4.2},
+  {lat:40.968, lon:28.984, name:'Kanlica Rock',      depth:3.1},
+  {lat:41.045, lon:29.01,  name:'Rumeli Shoal',      depth:5.8},
+  {lat:40.920, lon:28.975, name:'Anadolu Hisari Rk', depth:2.5},
+];
+
+// =============================================
+// DRAW CHART
+// =============================================
+function drawChart() {
+  if (!CW || !CH) return;
+  cc.clearRect(0,0,CW,CH);
+
+  var showDepth    = document.getElementById('togDepth').checked;
+  var showSoundings= document.getElementById('togSoundings').checked;
+  var showDangers  = document.getElementById('togDangers').checked;
+  var showTSS      = document.getElementById('togTSS').checked;
+  var showBuoys    = document.getElementById('togBuoys').checked;
+  var showCoast    = document.getElementById('togCoast').checked;
+  var showGrid     = document.getElementById('togGrid').checked;
+  var safetyDep    = parseFloat(document.getElementById('safetyDepth').value)||15;
+  var shallowCon   = parseFloat(document.getElementById('shallowContour').value)||5;
+  var deepCon      = parseFloat(document.getElementById('deepContour').value)||30;
+
+  // Sea background
+  cc.fillStyle = '#1a3a5c';
+  cc.fillRect(0,0,CW,CH);
+
+  // Grid / graticule
+  if (showGrid) drawGrid();
+
+  // TSS lanes
+  if (showTSS) drawTSS();
+
+  // Safety depth shading (shallow water)
+  if (showDepth) drawDepthShading(safetyDep, shallowCon, deepCon);
+
+  // Depth contours
+  if (showDepth) drawDepthContours(safetyDep);
+
+  // Depth soundings
+  if (showSoundings) drawSoundings(safetyDep);
+
+  // Coastline (land)
+  if (showCoast) drawCoastline();
+
+  // Dangers
+  if (showDangers) drawDangers();
+
+  // Buoys
+  if (showBuoys) drawBuoys();
+
+  // Past track
+  if (document.getElementById('togTrack').checked) drawPastTrack();
+
+  // Planned route
+  if (document.getElementById('togRoute').checked) drawRoute();
+
+  // Anchor
+  if (anchorPos) drawAnchor();
+
+  // MOB
+  if (mobPos) drawMOB();
+
+  // Extra marks
+  marks.forEach(function(m) { drawMark(m); });
+
+  // AIS targets
+  if (document.getElementById('togAIS').checked) drawAISTargets();
+
+  // Own ship
+  drawOwnShip();
+
+  // Update scale bar
+  updateScaleBar();
+}
+
+function drawGrid() {
+  cc.strokeStyle = 'rgba(0,100,150,0.25)';
+  cc.lineWidth = 0.5;
+  cc.setLineDash([4,8]);
+  // Latitude lines every 0.05°
+  var latStep = 0.05;
+  for (var lat = Math.floor(viewLat/latStep)*latStep - latStep*2; lat < viewLat + 2; lat += latStep) {
+    var p1 = latLonToXY(lat, viewLon - 1);
+    var p2 = latLonToXY(lat, viewLon + 1);
+    cc.beginPath(); cc.moveTo(p1.x,p1.y); cc.lineTo(p2.x,p2.y); cc.stroke();
+    // Label
+    cc.fillStyle = 'rgba(0,150,200,0.5)';
+    cc.font = '8px Share Tech Mono'; cc.textAlign='left'; cc.textBaseline='bottom';
+    var py = latLonToXY(lat, viewLon - 0.5);
+    if (py.y > 0 && py.y < CH) {
+      cc.fillText(lat.toFixed(2)+'°N', 2, py.y);
+    }
+  }
+  // Longitude lines every 0.05°
+  for (var lon = Math.floor(viewLon/latStep)*latStep - latStep*2; lon < viewLon + 2; lon += latStep) {
+    var q1 = latLonToXY(viewLat + 1, lon);
+    var q2 = latLonToXY(viewLat - 1, lon);
+    cc.beginPath(); cc.moveTo(q1.x,q1.y); cc.lineTo(q2.x,q2.y); cc.stroke();
+    cc.fillStyle = 'rgba(0,150,200,0.5)';
+    cc.font = '8px Share Tech Mono'; cc.textAlign='center'; cc.textBaseline='top';
+    var qp = latLonToXY(viewLat + 0.3, lon);
+    if (qp.x > 0 && qp.x < CW) {
+      cc.fillText(lon.toFixed(2)+'°E', qp.x, 2);
+    }
+  }
+  cc.setLineDash([]);
+}
+
+function drawTSS() {
+  // Northbound lane
+  cc.strokeStyle = 'rgba(100,100,255,0.4)';
+  cc.lineWidth = 1; cc.setLineDash([8,4]);
+  drawPolyline(tssNBLane);
+  // Southbound lane
+  drawPolyline(tssSBLane);
+  cc.setLineDash([]);
+  // Separation zone fill
+  cc.fillStyle = 'rgba(100,100,200,0.06)';
+  cc.beginPath();
+  tssNBLane.forEach(function(pt,i) {
+    var p = latLonToXY(pt[0],pt[1]);
+    if (i===0) cc.moveTo(p.x,p.y); else cc.lineTo(p.x,p.y);
+  });
+  tssSBLane.slice().reverse().forEach(function(pt) {
+    var p = latLonToXY(pt[0],pt[1]);
+    cc.lineTo(p.x,p.y);
+  });
+  cc.closePath(); cc.fill();
+  // Labels
+  var mp = latLonToXY(41.0, 28.985);
+  cc.fillStyle='rgba(100,100,255,0.6)'; cc.font='8px Rajdhani'; cc.textAlign='center';
+  cc.fillText('TSS', mp.x, mp.y);
+}
+
+function drawDepthShading(safetyDep, shallowCon, deepCon) {
+  // Draw shallow water as lighter blue on European side
+  cc.fillStyle = 'rgba(30,90,130,0.3)';
+  bosphorusEuro.forEach(function(pt,i) {
+    if (i===0) return;
+    var prev = bosphorusEuro[i-1];
+    var p1 = latLonToXY(prev[0],prev[1]);
+    var p2 = latLonToXY(pt[0],pt[1]);
+    cc.fillRect(Math.min(p1.x,p2.x)-20, Math.min(p1.y,p2.y), Math.abs(p1.x-p2.x)+20, Math.abs(p1.y-p2.y)+4);
+  });
+  // Asian shore shallow
+  bosphorusAsia.forEach(function(pt,i) {
+    if (i===0) return;
+    var prev = bosphorusAsia[i-1];
+    var p1 = latLonToXY(prev[0],prev[1]);
+    var p2 = latLonToXY(pt[0],pt[1]);
+    cc.fillRect(p1.x, Math.min(p1.y,p2.y), 20, Math.abs(p1.y-p2.y)+4);
+  });
+}
+
+function drawDepthContours(safetyDep) {
+  depthContours.forEach(function(c) {
+    var isSafety = c.depth === safetyDep || (c.depth <= safetyDep && c.depth > safetyDep*0.5);
+    cc.strokeStyle = isSafety ? 'rgba(255,170,0,0.6)' : c.depth < 20 ? 'rgba(255,50,50,0.4)' : 'rgba(0,150,200,0.3)';
+    cc.lineWidth = isSafety ? 1.5 : 0.8;
+    cc.setLineDash(isSafety ? [] : [3,3]);
+    drawPolyline(c.pts.map(function(p){return[p[0],p[1]];}));
+    cc.setLineDash([]);
+    // Label
+    if (c.pts.length > 0) {
+      var mid = c.pts[Math.floor(c.pts.length/2)];
+      var mp  = latLonToXY(mid[0],mid[1]);
+      cc.fillStyle = isSafety ? 'rgba(255,170,0,0.8)' : 'rgba(0,150,200,0.6)';
+      cc.font='8px Share Tech Mono'; cc.textAlign='center'; cc.textBaseline='middle';
+      cc.fillText(c.depth+'m', mp.x, mp.y);
+    }
+  });
+}
+
+function drawSoundings(safetyDep) {
+  var minSpacing = zoomLevel > 8 ? 8 : zoomLevel > 4 ? 14 : 20; // px minimum between labels
+  soundings.forEach(function(s) {
+    var p = latLonToXY(s.lat, s.lon);
+    if (p.x < -20 || p.x > CW+20 || p.y < -20 || p.y > CH+20) return;
+    // Colour by depth vs safety
+    var col;
+    if      (s.d < 5)          col = '#ff2244'; // very shallow - danger
+    else if (s.d < safetyDep)  col = '#ffaa00'; // below safety depth
+    else if (s.d < safetyDep*2)col = '#88ccff'; // caution
+    else                        col = '#4a8ab0'; // safe deep
+    var fs = zoomLevel > 6 ? 10 : zoomLevel > 3 ? 9 : 8;
+    cc.fillStyle = col;
+    cc.font = fs+'px Share Tech Mono';
+    cc.textAlign = 'center';
+    cc.textBaseline = 'middle';
+    cc.fillText(s.d, p.x, p.y);
+    // At high zoom, draw a small dot marker too
+    if (zoomLevel > 6) {
+      cc.fillStyle = col;
+      cc.beginPath();
+      cc.arc(p.x, p.y+7, 1.5, 0, Math.PI*2);
+      cc.fill();
+    }
+  });
+}
+
+function drawCoastline() {
+  // European shore — land fill
+  cc.fillStyle = '#c8a870';
+  cc.strokeStyle = '#a08040';
+  cc.lineWidth = 1.5;
+  cc.beginPath();
+  bosphorusEuro.forEach(function(pt,i) {
+    var p = latLonToXY(pt[0],pt[1]);
+    if (i===0) cc.moveTo(p.x-200,p.y); else if (i===1) cc.moveTo(p.x,p.y); else cc.lineTo(p.x,p.y);
+  });
+  var last = latLonToXY(bosphorusEuro[bosphorusEuro.length-1][0], bosphorusEuro[bosphorusEuro.length-1][1]);
+  cc.lineTo(last.x-200, last.y);
+  cc.closePath(); cc.fill(); cc.stroke();
+
+  // Asian shore — land fill
+  cc.beginPath();
+  bosphorusAsia.forEach(function(pt,i) {
+    var p = latLonToXY(pt[0],pt[1]);
+    if (i===0) cc.moveTo(p.x+200,p.y); else if (i===1) cc.moveTo(p.x,p.y); else cc.lineTo(p.x,p.y);
+  });
+  var lastA = latLonToXY(bosphorusAsia[bosphorusAsia.length-1][0], bosphorusAsia[bosphorusAsia.length-1][1]);
+  cc.lineTo(lastA.x+200, lastA.y);
+  cc.closePath(); cc.fill(); cc.stroke();
+}
+
+function drawDangers() {
+  dangers.forEach(function(d) {
+    var p = latLonToXY(d.lat, d.lon);
+    if (p.x < -20 || p.x > CW+20 || p.y < -20 || p.y > CH+20) return;
+    // Rock symbol
+    cc.strokeStyle='#ff4444'; cc.lineWidth=1.5;
+    cc.beginPath(); cc.arc(p.x,p.y,6,0,Math.PI*2); cc.stroke();
+    cc.beginPath(); cc.moveTo(p.x-4,p.y); cc.lineTo(p.x+4,p.y); cc.moveTo(p.x,p.y-4); cc.lineTo(p.x,p.y+4); cc.stroke();
+    cc.fillStyle='#ff4444'; cc.font='7px Share Tech Mono'; cc.textAlign='left'; cc.textBaseline='bottom';
+    cc.fillText(d.depth+'m', p.x+8, p.y);
+  });
+}
+
+function drawBuoys() {
+  buoys.forEach(function(b) {
+    var p = latLonToXY(b.lat, b.lon);
+    if (p.x < -10 || p.x > CW+10 || p.y < -10 || p.y > CH+10) return;
+    var col = b.type==='green'?'#00ff88' : b.type==='red'?'#ff4444' : '#ffaa00';
+    // Diamond shape
+    cc.fillStyle=col; cc.strokeStyle='#fff'; cc.lineWidth=0.5;
+    cc.beginPath();
+    cc.moveTo(p.x,   p.y-6);
+    cc.lineTo(p.x+4, p.y);
+    cc.lineTo(p.x,   p.y+6);
+    cc.lineTo(p.x-4, p.y);
+    cc.closePath(); cc.fill(); cc.stroke();
+    // Vertical line (mast)
+    cc.strokeStyle=col; cc.lineWidth=1;
+    cc.beginPath(); cc.moveTo(p.x,p.y-6); cc.lineTo(p.x,p.y-12); cc.stroke();
+    // Name
+    cc.fillStyle=col; cc.font='7px Share Tech Mono'; cc.textAlign='left'; cc.textBaseline='middle';
+    if (zoomLevel >= 3) cc.fillText(b.name, p.x+8, p.y);
+  });
+}
+
+function drawPolyline(pts) {
+  if (pts.length < 2) return;
+  cc.beginPath();
+  pts.forEach(function(pt,i) {
+    var p = latLonToXY(pt[0],pt[1]);
+    if (i===0) cc.moveTo(p.x,p.y); else cc.lineTo(p.x,p.y);
+  });
+  cc.stroke();
+}
+
+function drawRoute() {
+  if (waypoints.length < 1) return;
+  // Line
+  cc.strokeStyle = 'rgba(0,255,157,0.8)';
+  cc.lineWidth = 1.5; cc.setLineDash([8,4]);
+  cc.beginPath();
+  var sp = latLonToXY(shipLat, shipLon);
+  cc.moveTo(sp.x, sp.y);
+  waypoints.forEach(function(w) {
+    var p = latLonToXY(w.lat, w.lon);
+    cc.lineTo(p.x,p.y);
+  });
+  cc.stroke(); cc.setLineDash([]);
+  // Waypoint symbols
+  waypoints.forEach(function(w,i) {
+    var p = latLonToXY(w.lat, w.lon);
+    cc.fillStyle='rgba(0,255,157,0.9)'; cc.strokeStyle='#00ff9d'; cc.lineWidth=1;
+    cc.beginPath(); cc.arc(p.x,p.y,5,0,Math.PI*2); cc.fill(); cc.stroke();
+    cc.fillStyle='#00ff9d'; cc.font='8px Share Tech Mono'; cc.textAlign='left'; cc.textBaseline='bottom';
+    cc.fillText('WP'+(i+1), p.x+7, p.y-2);
+    if (w.speed) cc.fillText(w.speed+'kts', p.x+7, p.y+8);
+  });
+  // XTE corridor (0.1NM either side)
+  if (monitoring && waypoints.length >= 1) {
+    var nm = nmToPixels(0.1);
+    cc.strokeStyle='rgba(0,255,157,0.15)'; cc.lineWidth=nm*2; cc.setLineDash([]);
+    cc.beginPath();
+    cc.moveTo(sp.x,sp.y);
+    waypoints.forEach(function(w) { var p=latLonToXY(w.lat,w.lon); cc.lineTo(p.x,p.y); });
+    cc.stroke();
+    cc.lineWidth=1;
+  }
+}
+
+function drawPastTrack() {
+  if (pastTrack.length < 2) return;
+  cc.strokeStyle='rgba(0,180,255,0.5)'; cc.lineWidth=1.5; cc.setLineDash([]);
+  cc.beginPath();
+  pastTrack.forEach(function(pt,i) {
+    var p = latLonToXY(pt.lat, pt.lon);
+    if (i===0) cc.moveTo(p.x,p.y); else cc.lineTo(p.x,p.y);
+  });
+  cc.stroke();
+  // dots every few points
+  for (var pi=0;pi<pastTrack.length;pi+=10) {
+    var pt=pastTrack[pi], p=latLonToXY(pt.lat,pt.lon);
+    cc.fillStyle='rgba(0,180,255,0.4)'; cc.beginPath(); cc.arc(p.x,p.y,2,0,Math.PI*2); cc.fill();
+  }
+}
+
+function drawAISTargets() {
+  aisTargets.forEach(function(t) {
+    var p = latLonToXY(t.lat, t.lon);
+    if (p.x < -20 || p.x > CW+20 || p.y < -20 || p.y > CH+20) return;
+    // Triangle pointing in direction of travel
+    var rot = t.course * DEG2RAD;
+    cc.save();
+    cc.translate(p.x, p.y);
+    cc.rotate(rot);
+    cc.fillStyle = t.selected ? '#ffaa00' : '#00ccff';
+    cc.strokeStyle = t.selected ? '#ffaa00' : '#00ccff';
+    cc.lineWidth = 1;
+    cc.beginPath();
+    cc.moveTo(0,-10);
+    cc.lineTo(-5,5);
+    cc.lineTo(5,5);
+    cc.closePath();
+    cc.fill();
+    // Vector line
+    if (document.getElementById('togVector').checked) {
+      var vecLen = nmToPixels(t.speed * 6 / 60); // 6 min vector
+      cc.strokeStyle='rgba(0,204,255,0.6)'; cc.lineWidth=1; cc.setLineDash([3,3]);
+      cc.beginPath(); cc.moveTo(0,-10); cc.lineTo(0,-10-vecLen); cc.stroke(); cc.setLineDash([]);
+    }
+    cc.restore();
+    // Name / MMSI label
+    cc.fillStyle='rgba(0,204,255,0.8)'; cc.font='8px Share Tech Mono'; cc.textAlign='left'; cc.textBaseline='top';
+    if (zoomLevel >= 2) cc.fillText(t.name.substring(0,12), p.x+12, p.y-4);
+  });
+}
+
+function drawOwnShip() {
+  sc.clearRect(0,0,CW,CH);
+  var p = latLonToXY(shipLat, shipLon);
+  var rot = ownHdg * DEG2RAD;
+
+  sc.save();
+  sc.translate(p.x, p.y);
+  sc.rotate(rot);
+
+  // Ship outline (simplified plan view)
+  var sl = nmToPixels(0.05); // ship length on chart
+  sl = Math.max(sl, 16);
+  var sw = sl * 0.25;
+  sc.fillStyle = 'rgba(0,255,157,0.85)';
+  sc.strokeStyle = '#00ff9d';
+  sc.lineWidth = 1.5;
+  sc.beginPath();
+  sc.moveTo(0, -sl*0.6);        // bow
+  sc.lineTo(sw*0.5, -sl*0.3);
+  sc.lineTo(sw*0.5,  sl*0.4);
+  sc.lineTo(-sw*0.5, sl*0.4);
+  sc.lineTo(-sw*0.5,-sl*0.3);
+  sc.closePath();
+  sc.fill(); sc.stroke();
+
+  // Heading line
+  sc.strokeStyle='rgba(0,255,157,0.7)'; sc.lineWidth=1;
+  sc.beginPath(); sc.moveTo(0,-sl*0.6); sc.lineTo(0,-sl*0.6 - nmToPixels(0.3)); sc.stroke();
+
+  sc.restore();
+
+  // COG vector (different from heading)
+  if (document.getElementById('togVector').checked && ownSog > 0.1) {
+    var cogRot = ownCog * DEG2RAD;
+    var vecLen = nmToPixels(ownSog * 6 / 60); // 6-min vector
+    sc.strokeStyle='rgba(0,255,157,0.5)'; sc.lineWidth=2; sc.setLineDash([6,3]);
+    sc.beginPath();
+    sc.moveTo(p.x, p.y);
+    sc.lineTo(p.x + Math.sin(cogRot)*vecLen, p.y - Math.cos(cogRot)*vecLen);
+    sc.stroke(); sc.setLineDash([]);
+  }
+
+  // Safety contour circle (UKC warning)
+  if (ownUKC < 5) {
+    sc.strokeStyle='rgba(255,34,68,0.4)'; sc.lineWidth=2; sc.setLineDash([4,4]);
+    sc.beginPath(); sc.arc(p.x,p.y, nmToPixels(0.1), 0, Math.PI*2); sc.stroke(); sc.setLineDash([]);
+  }
+
+  // North arrow
+  var nax=CW-35, nay=50, nar=20;
+  sc.fillStyle='#060e1c'; sc.strokeStyle='#0d2a45'; sc.lineWidth=1;
+  sc.beginPath(); sc.arc(nax,nay,nar+3,0,Math.PI*2); sc.fill(); sc.stroke();
+  // N pointer
+  var northRot = document.getElementById('togNorthUp').checked ? 0 : -ownHdg*DEG2RAD;
+  sc.save(); sc.translate(nax,nay); sc.rotate(northRot);
+  sc.fillStyle='#ff4444'; sc.beginPath(); sc.moveTo(0,-nar); sc.lineTo(-5,0); sc.lineTo(5,0); sc.closePath(); sc.fill();
+  sc.fillStyle='#4a8ab0'; sc.beginPath(); sc.moveTo(0,nar); sc.lineTo(-5,0); sc.lineTo(5,0); sc.closePath(); sc.fill();
+  sc.fillStyle='#ff4444'; sc.font='bold 10px Rajdhani'; sc.textAlign='center'; sc.textBaseline='middle';
+  sc.fillText('N',0,-nar-7);
+  sc.restore();
+}
+
+function drawAnchor() {
+  var p = latLonToXY(anchorPos.lat, anchorPos.lon);
+  cc.strokeStyle='#ffaa00'; cc.lineWidth=2;
+  cc.beginPath(); cc.arc(p.x,p.y,8,0,Math.PI*2); cc.stroke();
+  cc.fillStyle='#ffaa00'; cc.font='10px Rajdhani'; cc.textAlign='center'; cc.textBaseline='middle';
+  cc.fillText('⚓',p.x,p.y);
+}
+
+function drawMOB() {
+  var p = latLonToXY(mobPos.lat, mobPos.lon);
+  cc.fillStyle='#ff2244'; cc.strokeStyle='#ff2244'; cc.lineWidth=2;
+  cc.beginPath(); cc.arc(p.x,p.y,10,0,Math.PI*2); cc.stroke();
+  cc.fillStyle='#ff2244'; cc.font='bold 11px Rajdhani'; cc.textAlign='center'; cc.textBaseline='middle';
+  cc.fillText('MOB',p.x,p.y+16);
+  cc.strokeStyle='rgba(255,34,68,0.3)'; cc.lineWidth=2; cc.setLineDash([4,4]);
+  cc.beginPath(); cc.arc(p.x,p.y,20,0,Math.PI*2); cc.stroke(); cc.setLineDash([]);
+}
+
+function drawMark(m) {
+  var p = latLonToXY(m.lat, m.lon);
+  cc.fillStyle='#ffdd00'; cc.strokeStyle='#ffdd00'; cc.lineWidth=1;
+  cc.beginPath(); cc.moveTo(p.x,p.y-6); cc.lineTo(p.x+5,p.y+4); cc.lineTo(p.x-5,p.y+4); cc.closePath(); cc.fill();
+  cc.fillStyle='#ffdd00'; cc.font='8px Share Tech Mono'; cc.textAlign='left';
+  cc.fillText(m.label||'MARK',p.x+8,p.y);
+}
+
+function updateScaleBar() {
+  var nmLen = 0.5;
+  var pxLen = Math.round(nmToPixels(nmLen));
+  document.getElementById('scaleBar').textContent = '|'+('—').repeat(Math.max(1,Math.floor(pxLen/6)))+'| '+nmLen+' NM';
+}
+
+// =============================================
+// CHART INTERACTION
+// =============================================
+shipCanvas.addEventListener('mousedown', function(e) {
+  isDragging=true; dragStartX=e.clientX; dragStartY=e.clientY;
+  dragStartLat=viewLat; dragStartLon=viewLon;
+});
+
+shipCanvas.addEventListener('mousemove', function(e) {
+  if (isDragging) {
+    var dx = e.clientX - dragStartX;
+    var dy = e.clientY - dragStartY;
+    var pxPerDeg = pixelsPerDegree();
+    viewLon = dragStartLon - dx / pxPerDeg;
+    viewLat = dragStartLat + dy / (pxPerDeg * 1.3);
+    drawChart();
+  }
+  // Cursor readout
+  var rect = shipCanvas.getBoundingClientRect();
+  var pos = xyToLatLon(e.clientX - rect.left, e.clientY - rect.top);
+  var latStr = Math.abs(pos.lat).toFixed(4)+(pos.lat>=0?'N':'S');
+  var lonStr = Math.abs(pos.lon).toFixed(4)+(pos.lon>=0?'E':'W');
+  var brg    = bearingTo(shipLat,shipLon,pos.lat,pos.lon);
+  var dist   = distNM(shipLat,shipLon,pos.lat,pos.lon);
+  document.getElementById('cursorInfo').textContent =
+    'CURSOR: '+latStr+' / '+lonStr+' | BRG '+brg.toFixed(1)+'° / '+dist.toFixed(2)+' NM';
+  // Check for target hover
+  checkTargetHover(e.clientX-rect.left, e.clientY-rect.top);
+});
+
+shipCanvas.addEventListener('mouseup', function(e) {
+  if (isDragging) {
+    isDragging=false;
+    if (Math.abs(e.clientX-dragStartX)<4 && Math.abs(e.clientY-dragStartY)<4) {
+      // Click — add waypoint if editing
+      if (routeEditing) {
+        var rect=shipCanvas.getBoundingClientRect();
+        var pos=xyToLatLon(e.clientX-rect.left,e.clientY-rect.top);
+        waypoints.push({lat:pos.lat,lon:pos.lon,speed:10});
+        renderWaypointList();
+        drawChart();
+      }
+    }
+  }
+});
+
+shipCanvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  if (e.deltaY < 0) zoom(1.3); else zoom(1/1.3);
+}, {passive:false});
+
+function checkTargetHover(mx, my) {
+  var popup = document.getElementById('tgtPopup');
+  var found = null;
+  aisTargets.forEach(function(t) {
+    var p = latLonToXY(t.lat, t.lon);
+    var d = Math.sqrt((mx-p.x)*(mx-p.x)+(my-p.y)*(my-p.y));
+    if (d < 14) found = t;
+  });
+  if (found) {
+    var brg  = bearingTo(shipLat,shipLon,found.lat,found.lon);
+    var dist = distNM(shipLat,shipLon,found.lat,found.lon);
+    var cpa  = calcCPA(found);
+    document.getElementById('tpName').textContent  = found.name+' ('+found.type+')';
+    document.getElementById('tpBrg').textContent   = brg.toFixed(1)+'°';
+    document.getElementById('tpRng').textContent   = dist.toFixed(2)+' NM';
+    document.getElementById('tpCog').textContent   = found.course.toFixed(1)+'°';
+    document.getElementById('tpSpd').textContent   = found.speed.toFixed(1)+' kts';
+    document.getElementById('tpCpa').textContent   = cpa.cpa.toFixed(2)+' NM';
+    document.getElementById('tpTcpa').textContent  = cpa.tcpa.toFixed(0)+' min';
+    popup.style.display='block';
+    popup.style.left = Math.min(mx+15, CW-160)+'px';
+    popup.style.top  = Math.min(my-10, CH-130)+'px';
+  } else {
+    popup.style.display='none';
+  }
+}
+
+function calcCPA(t) {
+  var oVx=ownSog*Math.sin(ownHdg*DEG2RAD), oVy=ownSog*Math.cos(ownHdg*DEG2RAD);
+  var tVx=t.speed*Math.sin(t.course*DEG2RAD), tVy=t.speed*Math.cos(t.course*DEG2RAD);
+  var rVx=tVx-oVx, rVy=tVy-oVy;
+  var dx=(t.lon-shipLon)*60*Math.cos(shipLat*DEG2RAD), dy=(t.lat-shipLat)*60;
+  var dot=dx*rVx+dy*rVy, rv2=rVx*rVx+rVy*rVy;
+  var tcpa=(rv2>0.001)?Math.max(0,-dot/rv2):999;
+  var cx2=dx+rVx*tcpa, cy2=dy+rVy*tcpa;
+  return {cpa:Math.sqrt(cx2*cx2+cy2*cy2), tcpa:tcpa*60};
+}
+
+// =============================================
+// AIS LIST
+// =============================================
+function renderAISList() {
+  document.getElementById('aisCnt').textContent = aisTargets.length;
+  var list = document.getElementById('aisList'); list.innerHTML='';
+  var sorted = aisTargets.slice().sort(function(a,b) {
+    return distNM(shipLat,shipLon,a.lat,a.lon) - distNM(shipLat,shipLon,b.lat,b.lon);
+  });
+  sorted.slice(0,12).forEach(function(t) {
+    var dist = distNM(shipLat,shipLon,t.lat,t.lon);
+    var cpa  = calcCPA(t);
+    var alarm= cpa.cpa < 0.5 && cpa.tcpa < 12;
+    var div  = document.createElement('div');
+    div.style.cssText='display:grid;grid-template-columns:1fr 40px 40px;gap:2px;padding:2px 0;border-bottom:1px solid rgba(13,42,69,0.4);font-size:9px;cursor:pointer;';
+    div.innerHTML='<span style="color:'+(alarm?'#ff4466':'#00ccff')+';">'+t.name.substring(0,14)+'</span>'
+      +'<span style="color:#3a7a9a;text-align:right">'+dist.toFixed(1)+'</span>'
+      +'<span style="color:'+(alarm?'#ff4466':'#3a7a9a')+';text-align:right">'+cpa.cpa.toFixed(1)+'</span>';
+    (function(tgt){ div.onclick=function(){ tgt.selected=!tgt.selected; drawChart(); }; })(t);
+    list.appendChild(div);
+    if (alarm) addAlarm('CPA ALARM: '+t.name+' CPA='+cpa.cpa.toFixed(2)+'NM / TCPA='+cpa.tcpa.toFixed(0)+'min');
+  });
+}
+
+function sortAISDist() {
+  aisTargets.sort(function(a,b){return distNM(shipLat,shipLon,a.lat,a.lon)-distNM(shipLat,shipLon,b.lat,b.lon);});
+  renderAISList();
+}
+
+function sortAISCPA() {
+  aisTargets.sort(function(a,b){return calcCPA(a).cpa-calcCPA(b).cpa;});
+  renderAISList();
+}
+
+// =============================================
+// ZOOM / VIEW
+// =============================================
+function zoom(factor) {
+  zoomLevel = Math.max(0.2, Math.min(200, zoomLevel * factor));
+  updateScaleDisplay();
+  drawChart();
+}
+
+function setScale(val) {
+  zoomLevel = parseFloat(val);
+  updateScaleDisplay();
+  drawChart();
+}
+
+function updateScaleDisplay() {
+  var scaleMap = {0.5:'1 : 500 000', 1:'1 : 200 000', 2:'1 : 100 000', 4:'1 : 50 000', 8:'1 : 25 000', 16:'1 : 12 500'};
+  var closest = Object.keys(scaleMap).reduce(function(a,b) {
+    return Math.abs(b-zoomLevel)<Math.abs(a-zoomLevel)?b:a;
+  });
+  document.getElementById('chartScale').textContent = scaleMap[closest]||'Custom';
+}
+
+function resetView() {
+  viewLat=shipLat; viewLon=shipLon; zoomLevel=4;
+  updateScaleDisplay(); drawChart();
+}
+
+function setCourseUp() {
+  var cu=document.getElementById('togCourseUp').checked;
+  if (cu) document.getElementById('togNorthUp').checked=false;
+}
+
+// =============================================
+// ROUTE FUNCTIONS
+// =============================================
+var routePresets = {
+  bosphorus_n: [
+    {lat:40.980, lon:28.996, speed:8, name:'WP1 Entrance'},
+    {lat:41.000, lon:28.992, speed:8, name:'WP2 Kandilli'},
+    {lat:41.025, lon:28.985, speed:10,name:'WP3 Bebek'},
+    {lat:41.050, lon:28.979, speed:10,name:'WP4 Rumeli'},
+    {lat:41.085, lon:28.975, speed:12,name:'WP5 North Exit'},
+    {lat:41.120, lon:28.972, speed:12,name:'WP6 Black Sea'},
+  ],
+  bosphorus_s: [
+    {lat:41.120, lon:28.972, speed:8, name:'WP1 Black Sea'},
+    {lat:41.085, lon:28.975, speed:10,name:'WP2 North'},
+    {lat:41.050, lon:28.979, speed:10,name:'WP3 Rumeli'},
+    {lat:41.025, lon:28.985, speed:8, name:'WP4 Bebek'},
+    {lat:41.000, lon:28.992, speed:8, name:'WP5 Kandilli'},
+    {lat:40.980, lon:28.996, speed:6, name:'WP6 Exit'},
+  ],
+  marmara_e: [
+    {lat:40.980, lon:28.996, speed:12,name:'WP1 Bosphorus S'},
+    {lat:40.960, lon:29.050, speed:14,name:'WP2 Open Sea'},
+    {lat:40.930, lon:29.150, speed:14,name:'WP3 Mid Marmara'},
+    {lat:40.900, lon:29.280, speed:14,name:'WP4 Approach'},
+  ],
+  marmara_w: [
+    {lat:40.900, lon:29.280, speed:12,name:'WP1 East'},
+    {lat:40.920, lon:29.100, speed:14,name:'WP2 Mid Marmara'},
+    {lat:40.960, lon:28.990, speed:12,name:'WP3 Approach'},
+    {lat:40.980, lon:28.960, speed:8, name:'WP4 Bosphorus N'},
+  ]
+};
+
+function loadRoutePreset() {
+  var v = document.getElementById('routePreset').value;
+  if (!v || !routePresets[v]) return;
+  waypoints = routePresets[v].slice();
+  renderWaypointList();
+  drawChart();
+  calcRouteTotals();
+}
+
+function renderWaypointList() {
+  var list = document.getElementById('wptList'); list.innerHTML='';
+  // Header
+  var hdr=document.createElement('div'); hdr.className='rt-row rt-hdr';
+  hdr.innerHTML='<span>#</span><span>LAT</span><span>LON</span><span>kts</span>';
+  list.appendChild(hdr);
+  waypoints.forEach(function(w,i) {
+    var row=document.createElement('div'); row.className='rt-row';
+    row.innerHTML='<span class="rt-num">'+(i+1)+'</span>'
+      +'<span class="rt-coord">'+w.lat.toFixed(3)+'N</span>'
+      +'<span class="rt-coord">'+w.lon.toFixed(3)+'E</span>'
+      +'<span class="rt-spd">'+(w.speed||10)+'</span>';
+    list.appendChild(row);
+  });
+}
+
+function calcRouteTotals() {
+  var totalNM=0;
+  var prevLat=shipLat, prevLon=shipLon;
+  waypoints.forEach(function(w) {
+    totalNM += distNM(prevLat,prevLon,w.lat,w.lon);
+    prevLat=w.lat; prevLon=w.lon;
+  });
+  document.getElementById('routeDist').textContent=totalNM.toFixed(1)+' NM';
+  if (ownSog > 0.1 && waypoints.length > 0) {
+    var hrs = totalNM/ownSog;
+    var now = new Date();
+    now.setHours(now.getHours()+Math.floor(hrs));
+    now.setMinutes(now.getMinutes()+Math.round((hrs%1)*60));
+    document.getElementById('routeETA').textContent=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0');
+  }
+  if (waypoints.length > 0) document.getElementById('bb-wpt').textContent='WP1 '+waypoints[0].lat.toFixed(3)+'N';
+}
+
+function startRouteEdit() {
+  routeEditing=!routeEditing;
+  document.getElementById('btnMonitor').textContent=routeEditing?'CLICK CHART: ADD WPT':'MONITORING ON';
+}
+
+function clearRoute() {
+  waypoints=[]; routeEditing=false;
+  document.getElementById('routePreset').value='';
+  renderWaypointList(); drawChart();
+  document.getElementById('routeDist').textContent='0.0 NM';
+}
+
+function reverseRoute() {
+  waypoints.reverse(); renderWaypointList(); drawChart();
+}
+
+function toggleMonitor() {
+  monitoring=!monitoring;
+  document.getElementById('btnMonitor').classList.toggle('on',monitoring);
+  document.getElementById('btnMonitor').textContent=monitoring?'MONITORING ON':'MONITORING OFF';
+}
+
+// =============================================
+// MARKS / ANCHOR / MOB
+// =============================================
+function dropAnchor() {
+  anchorPos={lat:shipLat,lon:shipLon};
+  addAlarm('ANCHOR DROPPED: '+shipLat.toFixed(4)+'N '+shipLon.toFixed(4)+'E');
+  document.getElementById('btnDropAnchor').textContent='HEAVE ANCHOR';
+  drawChart();
+}
+
+function markPos() {
+  marks.push({lat:shipLat,lon:shipLon,label:'MARK'+marks.length});
+  drawChart();
+}
+
+function clearMarks() { marks=[]; anchorPos=null; drawChart(); }
+
+function mobOnChart() {
+  mobPos={lat:shipLat,lon:shipLon};
+  addAlarm('MOB POSITION MARKED: '+shipLat.toFixed(4)+'N');
+  document.getElementById('led-alm').className='led r';
+  document.getElementById('alarmBanner').style.display='block';
+  drawChart();
+}
+
+// =============================================
+// ALARMS
+// =============================================
+function addAlarm(msg) {
+  for (var i=0;i<alarms.length;i++){if(alarms[i].msg===msg&&!alarms[i].ack)return;}
+  alarms.push({msg:msg,ack:false});
+  renderAlarms();
+  document.getElementById('led-alm').className='led r';
+  document.getElementById('alarmBanner').style.display='block';
+  document.getElementById('alarmBanner').textContent='⚠ '+msg;
+}
+
+function renderAlarms() {
+  var list=document.getElementById('ecAlarmList'); list.innerHTML='';
+  if (alarms.length===0){list.innerHTML='<div class="alm ack" style="color:#1a4a6a;">No alarms</div>';return;}
+  alarms.slice(-8).reverse().forEach(function(a) {
+    var d=document.createElement('div'); d.className='alm'+(a.ack?' ack':''); d.textContent=a.msg;
+    (function(al){d.onclick=function(){al.ack=true;renderAlarms();};})(a);
+    list.appendChild(d);
+  });
+}
+
+function ackAllAlarms() {
+  alarms.forEach(function(a){a.ack=true;});
+  renderAlarms();
+  document.getElementById('led-alm').className='led o';
+  document.getElementById('alarmBanner').style.display='none';
+}
+
+// =============================================
+// SIMULATION TICK
+// =============================================
+function simTick() {
+  if (isPaused) return;
+  simSecs++;
+
+  // Move ship based on heading/speed
+  if (ownSog > 0.01) {
+    var dtHr = 1/3600;
+    var dlat = Math.cos(ownHdg*DEG2RAD) * ownSog * dtHr / 60;
+    var dlon = Math.sin(ownHdg*DEG2RAD) * ownSog * dtHr / (60 * Math.cos(shipLat*DEG2RAD));
+    shipLat += dlat;
+    shipLon += dlon;
+    // Store past track
+    if (simSecs % 10 === 0) {
+      pastTrack.push({lat:shipLat,lon:shipLon});
+      if (pastTrack.length > 200) pastTrack.shift();
+    }
+    // Pan view to follow ship
+    var dp = latLonToXY(shipLat, shipLon);
+    var margin = 80;
+    if (dp.x < margin || dp.x > CW-margin || dp.y < margin || dp.y > CH-margin) {
+      viewLat=shipLat; viewLon=shipLon;
+    }
+  }
+
+  // Move AIS targets
+  aisTargets.forEach(function(t) {
+    var dtHr=1/3600;
+    t.lat += Math.cos(t.course*DEG2RAD)*t.speed*dtHr/60;
+    t.lon += Math.sin(t.course*DEG2RAD)*t.speed*dtHr/(60*Math.cos(t.lat*DEG2RAD));
+    // Respawn if too far
+    if (distNM(shipLat,shipLon,t.lat,t.lon) > 8) {
+      var ang=Math.random()*Math.PI*2, d2=1+Math.random()*3;
+      t.lat=shipLat+Math.cos(ang)*d2/60;
+      t.lon=shipLon+Math.sin(ang)*d2/(60*Math.cos(shipLat*DEG2RAD));
+      t.course=Math.random()*360;
+    }
+  });
+
+  // XTE calculation
+  if (waypoints.length > 0) {
+    var wpt=waypoints[0];
+    var brg=bearingTo(shipLat,shipLon,wpt.lat,wpt.lon);
+    ownXTE=(brg-ownCog+360)%360;
+    if (ownXTE>180) ownXTE-=360;
+    ownXTE=ownXTE*0.01;
+    if (Math.abs(ownXTE)>0.15 && monitoring) addAlarm('XTE EXCEEDED: '+Math.abs(ownXTE).toFixed(2)+'NM');
+  }
+
+  // Depth (simplified)
+  ownDepth = 26.8 + Math.sin(simSecs/120)*3;
+  ownUKC   = ownDepth - ownDraft;
+  if (ownUKC < 3) addAlarm('CRITICAL UKC: '+ownUKC.toFixed(1)+'m');
+
+  updateDisplays();
+  drawChart();
+  renderAISList();
+}
+
+setInterval(simTick, 1000);
+
+// =============================================
+// UPDATE DISPLAYS
+// =============================================
+function updateDisplays() {
+  var latStr=formatLat(shipLat), lonStr=formatLon(shipLon);
+  var hdgStr=ownHdg.toFixed(1)+'°', sogStr=ownSog.toFixed(1)+' kts';
+
+  document.getElementById('ov-lat').textContent=latStr;
+  document.getElementById('ov-lon').textContent=lonStr;
+  document.getElementById('ov-hdg').textContent=hdgStr;
+  document.getElementById('ov-sog').textContent=sogStr;
+  document.getElementById('ov-cog').textContent=ownCog.toFixed(1)+'°';
+  document.getElementById('ov-dep').textContent=ownDepth.toFixed(1)+'m';
+  document.getElementById('ov-ukc').textContent=ownUKC.toFixed(1)+'m';
+
+  if (waypoints.length>0) {
+    var dtg=distNM(shipLat,shipLon,waypoints[0].lat,waypoints[0].lon);
+    document.getElementById('ov-dtg').textContent=dtg.toFixed(2)+'NM';
+  }
+
+  document.getElementById('rp-lat').textContent=latStr;
+  document.getElementById('rp-lon').textContent=lonStr;
+  document.getElementById('rp-hdg').textContent=ownHdg.toFixed(1)+'° / '+ownCog.toFixed(1)+'°';
+  document.getElementById('rp-spd').textContent=ownSog.toFixed(1)+' / '+ownSog.toFixed(1)+' kts';
+  document.getElementById('rp-dep').textContent=ownDepth.toFixed(1)+' / '+ownUKC.toFixed(1)+' m';
+  document.getElementById('rp-xte').textContent=Math.abs(ownXTE).toFixed(3)+(ownXTE>0?' S':ownXTE<0?' P':'')+' NM';
+
+  document.getElementById('bb-lat').textContent=latStr;
+  document.getElementById('bb-lon').textContent=lonStr;
+  document.getElementById('bb-hdg').textContent=hdgStr;
+  document.getElementById('bb-sog').textContent=sogStr;
+  document.getElementById('bb-cog').textContent=ownCog.toFixed(1)+'°';
+  document.getElementById('bb-dep').textContent=ownDepth.toFixed(1)+' m';
+  document.getElementById('bb-ukc').textContent=ownUKC.toFixed(1)+' m';
+  document.getElementById('bb-xte').textContent=Math.abs(ownXTE).toFixed(3)+' NM';
+
+  var h=Math.floor(simSecs/3600),m=Math.floor((simSecs%3600)/60),s=simSecs%60;
+  document.getElementById('bb-sim').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+
+  calcRouteTotals();
+}
+
+function formatLat(lat) {
+  var d=Math.floor(Math.abs(lat)), mn=((Math.abs(lat)-d)*60);
+  return d+'°'+mn.toFixed(3)+(lat>=0?'N':'S');
+}
+
+function formatLon(lon) {
+  var d=Math.floor(Math.abs(lon)), mn=((Math.abs(lon)-d)*60);
+  return String(d).padStart(3,'0')+'°'+mn.toFixed(3)+(lon>=0?'E':'W');
+}
+
+// =============================================
+// CLOCK
+// =============================================
+function updateClock() {
+  var now=new Date();
+  var ts=String(now.getUTCHours()).padStart(2,'0')+':'+String(now.getUTCMinutes()).padStart(2,'0')+':'+String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent=ts+' UTC';
+  document.getElementById('bb-utc').textContent=ts;
+}
+setInterval(updateClock,1000); updateClock();
+
+// =============================================
+// BROADCAST CHANNEL
+// =============================================
+try {
+  var bc=new BroadcastChannel('btm_sim');
+  bc.onmessage=function(e) {
+    var d=e.data; if(!d)return;
+    if (d.type==='STATE_UPDATE'&&d.data) {
+      if (d.data.position) {
+        ownHdg=d.data.position.hdg||ownHdg;
+        ownSog=d.data.position.sog||ownSog;
+        ownCog=ownHdg;
+        if (d.data.position.lat) {
+          var ps=parsePosition(d.data.position.lat,d.data.position.lon);
+          if (ps) { shipLat=ps.lat; shipLon=ps.lon; viewLat=shipLat; viewLon=shipLon; }
+        }
+      }
+      if (d.data.targets && d.data.targets.length) {
+        d.data.targets.forEach(function(t) {
+          var found=false;
+          for (var i=0;i<aisTargets.length;i++){if(aisTargets[i].id===t.id){found=true;break;}}
+          if (!found && aisTargets.length<20) {
+            var brgRad=(t.brg||0)*DEG2RAD, dist2=t.range||1;
+            aisTargets.push({
+              id:tidN++, lat:shipLat+Math.cos(brgRad)*dist2/60,
+              lon:shipLon+Math.sin(brgRad)*dist2/(60*Math.cos(shipLat*DEG2RAD)),
+              course:t.course||0, speed:t.speed||8, name:t.name||'TARGET',
+              type:t.type||'VESSEL', mmsi:t.mmsi||'000000000', selected:false
+            });
+          }
+        });
+      }
+    }
+    if (d.type==='SIM_TICK'&&d.data){simSecs=d.data.simSeconds||simSecs;}
+    if (d.type==='SIM_PAUSE'||d.type==='FREEZE'){isPaused=true;}
+    if (d.type==='SIM_RESUME'||d.type==='SIM_START'){isPaused=false;}
+    if (d.type==='SIM_STOP'){isPaused=true;simSecs=0;}
+    if (d.type==='MOB'){mobOnChart();}
+    if (d.type==='LOAD_SCENARIO'&&d.data.scenario){
+      var sc2=d.data.scenario;
+      if (sc2.area&&sc2.area.toLowerCase().indexOf('bosphorus')>=0){
+        document.getElementById('routePreset').value='bosphorus_n';
+        loadRoutePreset();
+      }
+      addAlarm('Scenario: '+sc2.name);
+    }
+    if (d.type==='INJECT'&&d.data.inject==='mob'){mobOnChart();}
+    if (d.type==='CONNING_STATE'&&d.data){
+      ownHdg=d.data.hdg||ownHdg; ownSog=d.data.sog||ownSog; ownCog=d.data.cog||ownCog;
+    }
+  };
+  bc.postMessage({type:'STATION_PING',data:{station:'ecdis'}});
+} catch(e){}
+
+function parsePosition(latStr, lonStr) {
+  // Try to parse "40°58.283N" format
+  try {
+    var latM=String(latStr).match(/([\d.]+)[°\s]+([\d.]+)?([NS])?/i);
+    var lonM=String(lonStr).match(/([\d.]+)[°\s]+([\d.]+)?([EW])?/i);
+    if (latM && lonM) {
+      var lat=parseFloat(latM[1])+(parseFloat(latM[2]||0)/60);
+      var lon=parseFloat(lonM[1])+(parseFloat(lonM[2]||0)/60);
+      if ((latM[3]||'N').toUpperCase()==='S') lat=-lat;
+      if ((lonM[3]||'E').toUpperCase()==='W') lon=-lon;
+      return {lat:lat, lon:lon};
+    }
+  } catch(e){}
+  return null;
+}
+
+// =============================================
+// INIT
+// =============================================
+renderAlarms();
+// Load Bosphorus route by default
+document.getElementById('routePreset').value='bosphorus_n';
+loadRoutePreset();
+
+setTimeout(function() {
+  resizeCanvases();
+  renderAISList();
+}, 100);
+</script>
+<div style="position:fixed;bottom:8px;left:12px;z-index:9999;pointer-events:none;"><span style="font-family:Georgia,serif;font-size:15px;font-weight:bold;color:#ffd700;letter-spacing:2px;text-shadow:0 0 10px rgba(255,215,0,0.6);">CASY SIMULATIONS</span></div>
+</body>
+</html>
